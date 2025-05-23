@@ -1,0 +1,8 @@
+{
+  "data": {
+    "email": "handayani@gmail.com",
+    "role": "Student",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJlbWFpbCI6ImhhbmRheWFuaUBnbWFpbC5jb20iLCJyb2xlIjoiU3R1ZGVudCIsImV4cCI6MTc0ODA5MTM1NiwiaWF0IjoxNzQ4MDA0OTU2fQ.jcdeegrjxhiryFSrPIYmSKlTLfW85uhGMX2AfOwSjlU"
+  },
+  "message": "Successfully signed in"
+}
