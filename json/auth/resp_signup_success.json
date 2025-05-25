@@ -1,8 +1,10 @@
 {
   "data": {
-    "username": "Aditya Maulana Zidqy",
-    "email": "adityamaullana234@gmail.com",
+    "username": "Sung Kang",
+    "email": "sungkang@gmail.com",
+    "email_verified": false,
     "telephone": null,
+    "telephone_verified": false,
     "study_program": "Informatics Engineering",
     "role": "Student",
     "batch": 2025,

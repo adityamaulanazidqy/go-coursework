@@ -57,3 +57,18 @@ func (helper *SaveImage) Profile(file multipart.File, handler *multipart.FileHea
 
 	return filename, nil
 }
+
+type DeleteImage struct{}
+
+func DeleteImages() *DeleteImage {
+	return &DeleteImage{}
+}
+
+func (helper *DeleteImage) Profile(filename string) error {
+	err := os.Remove(fmt.Sprintf("assets/images/profile/%s", filename))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

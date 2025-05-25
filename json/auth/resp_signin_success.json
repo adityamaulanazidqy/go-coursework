@@ -1,8 +1,11 @@
 {
   "data": {
-    "email": "handayani@gmail.com",
+    "email": "sungkang@gmail.com",
+    "email_verified": false,
+    "telephone": null,
+    "telephone_verified": false,
     "role": "Student",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJlbWFpbCI6ImhhbmRheWFuaUBnbWFpbC5jb20iLCJyb2xlIjoiU3R1ZGVudCIsImV4cCI6MTc0ODA5MTM1NiwiaWF0IjoxNzQ4MDA0OTU2fQ.jcdeegrjxhiryFSrPIYmSKlTLfW85uhGMX2AfOwSjlU"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6InN1bmdrYW5nQGdtYWlsLmNvbSIsInJvbGUiOiJTdHVkZW50IiwiZXhwIjoxNzQ4MjA3NzcyLCJpYXQiOjE3NDgxMjEzNzJ9.uHCkUnYOVnUN-MlZ_fsyqtkt--qsbSDw8Z67GKllssU"
   },
   "message": "Successfully signed in"
 }

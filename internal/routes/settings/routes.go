@@ -16,5 +16,10 @@ func Setup(router fiber.Router, ctx *models.RouterContext) {
 			SetGroup.Post("/profile", jwt.Middleware("Admin", "Lecturer", "Student"), controller.SetProfile)
 			SetGroup.Post("/telephone", jwt.Middleware("Admin", "Lecturer", "Student"), controller.SetTelephone)
 		}
+
+		UpdateGroup := SettingGroup.Group("/update")
+		{
+			UpdateGroup.Post("/user-info", jwt.Middleware("Admin", "Lecturer", "Student"), controller.UpdateUserInfo)
+		}
 	}
 }

@@ -36,6 +36,7 @@ func (r *AuthenticationRepo) SignIn(req *auth.SignInRequest) (resp auth.UserSign
 	if err := r.db.
 		Preload("Role").
 		Preload("StudyProgram").
+		Preload("ContactVerification").
 		First(&user, "email = ?", req.Email).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, fiber.StatusNotFound, opRepo, err, msgNotFound, msgDetailsNotFound
@@ -54,9 +55,12 @@ func (r *AuthenticationRepo) SignIn(req *auth.SignInRequest) (resp auth.UserSign
 	}
 
 	resp = auth.UserSignInResponse{
-		Email: user.Email,
-		Role:  user.Role.Name,
-		Token: token,
+		Email:             user.Email,
+		EmailVerified:     user.ContactVerification.EmailVerified,
+		Telephone:         user.Telephone,
+		TelephoneVerified: user.ContactVerification.TelephoneVerified,
+		Role:              user.Role.Name,
+		Token:             token,
 	}
 
 	return resp, fiber.StatusOK, opRepo, nil, "Successfully signed in", nil
@@ -120,18 +124,31 @@ func (r *AuthenticationRepo) SignUp(req *auth.SignUpRequest) (resp auth.UserSign
 	if err := r.db.
 		Preload("Role").
 		Preload("StudyProgram").
+		Preload("ContactVerification").Where("id = ?", user.ID).
 		First(&existingUser).Error; err != nil {
 		return resp, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails
 	}
 
 	resp = auth.UserSignUpResponse{
-		Username:     existingUser.Username,
-		Email:        existingUser.Email,
-		Telephone:    req.Telephone,
-		StudyProgram: existingUser.StudyProgram.Name,
-		Role:         existingUser.Role.Name,
-		Batch:        req.Batch,
-		Profile:      existingUser.Profile,
+		Username:          existingUser.Username,
+		Email:             existingUser.Email,
+		EmailVerified:     existingUser.ContactVerification.EmailVerified,
+		Telephone:         req.Telephone,
+		TelephoneVerified: existingUser.ContactVerification.TelephoneVerified,
+		StudyProgram:      existingUser.StudyProgram.Name,
+		Role:              existingUser.Role.Name,
+		Batch:             req.Batch,
+		Profile:           existingUser.Profile,
+	}
+
+	var contactVerification = constants.UserContactVerification{
+		UserID:            user.ID,
+		EmailVerified:     resp.EmailVerified,
+		TelephoneVerified: resp.TelephoneVerified,
+	}
+
+	if err := r.db.Create(&contactVerification).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails
 	}
 
 	return resp, fiber.StatusOK, op, nil, "Successfully signed up", nil

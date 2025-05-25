@@ -64,7 +64,7 @@ func (h *AuthenticationHandler) SignUp(ctx *fiber.Ctx) error {
 		msgBodyParse            = "Failed to parse body"
 		msgBodyParseDetails     = []string{"One of the requests is not eligible"}
 		msgValidateError        = "There was an error while validating Sign In"
-		msgValidateErrorDetails = []string{"Use a valid email format", "Make sure you have filled in everything"}
+		msgValidateErrorDetails = []string{"Use a valid email format", "Make sure you have filled in everything", "make sure the password is more than 6 long"}
 	)
 
 	var req auth.SignUpRequest

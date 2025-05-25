@@ -8,6 +8,7 @@ import (
 	"go-coursework/internal/repositories"
 	"go-coursework/pkg/jwt"
 	"gorm.io/gorm"
+	"mime/multipart"
 )
 
 type SettingHandler struct {
@@ -96,6 +97,61 @@ func (h *SettingHandler) SetTelephone(ctx *fiber.Ctx) error {
 	}
 
 	resp, code, opRepo, err, msg, details := h.SettingRepo.SetTelephone(&req, claims.UserID)
+	if err != nil {
+		h.logLogrus.LogUserError(claims.Email, err, msg)
+		return h.logLogrus.LogRequestError(ctx, code, opRepo, err, msg, details)
+	}
+
+	return ctx.Status(code).JSON(fiber.Map{
+		"message": msg,
+		"data":    resp,
+	})
+}
+
+func (h *SettingHandler) UpdateUserInfo(ctx *fiber.Ctx) error {
+	const op = "handler.SettingHandler.UpdateUsername"
+
+	var (
+		msgInternalServerError        = "Internal Server Error"
+		msgInternalServerErrorDetails = []string{"User Internal Server Error", "Make sure your internet is on", "There may be a problem with our server"}
+		msgMissingClaims              = "Missing claims"
+		msgMissingClaimsDetails       = []string{"There was an error with your token. Please re-login to get a new access token"}
+	)
+
+	claims, ok := ctx.Locals("user").(*jwt.Claims)
+	if !ok || claims == nil {
+		err := errors.New(msgMissingClaims)
+		h.logLogrus.LogUserError("-", err, msgMissingClaims)
+		return h.logLogrus.LogRequestError(ctx, fiber.StatusUnauthorized, op, err, msgMissingClaims, msgMissingClaimsDetails)
+	}
+
+	var (
+		fileHeader    *multipart.FileHeader
+		multipartFile multipart.File
+	)
+
+	file, err := ctx.FormFile("profile")
+	if err == nil && file != nil {
+		multipartFileOpened, err := file.Open()
+		if err != nil {
+			h.logLogrus.LogUserError(claims.Email, err, msgInternalServerError)
+			return h.logLogrus.LogRequestError(ctx, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails)
+		}
+		fileHeader = file
+		multipartFile = multipartFileOpened
+	}
+
+	var req = settings.UpdateUserInfo{
+		Username:  ctx.FormValue("username"),
+		Email:     ctx.FormValue("email"),
+		Telephone: ctx.FormValue("telephone"),
+		Profile: settings.SetProfile{
+			FileHeader:    fileHeader,
+			MultipartFile: multipartFile,
+		},
+	}
+
+	resp, code, opRepo, err, msg, details := h.SettingRepo.UpdateUserInfo(&req, claims.UserID)
 	if err != nil {
 		h.logLogrus.LogUserError(claims.Email, err, msg)
 		return h.logLogrus.LogRequestError(ctx, code, opRepo, err, msg, details)

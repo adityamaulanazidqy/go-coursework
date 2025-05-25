@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gofiber/fiber/v2"
 	"go-coursework/config"
+	"go-coursework/internal/handlers/otp"
 	"go-coursework/internal/logger"
 	"go-coursework/internal/models"
 	"go-coursework/internal/routes"
@@ -27,6 +28,8 @@ func main() {
 	if err != nil {
 		return
 	}
+
+	otp.InitOtpEmail()
 
 	app := fiber.New()
 

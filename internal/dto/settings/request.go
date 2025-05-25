@@ -10,3 +10,10 @@ type SetProfile struct {
 type SetTelephone struct {
 	Telephone string `json:"telephone"`
 }
+
+type UpdateUserInfo struct {
+	Username  string     `json:"username"`
+	Profile   SetProfile `json:"profile"`
+	Email     string     `json:"email"`
+	Telephone string     `json:"telephone"`
+}
