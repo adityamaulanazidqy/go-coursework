@@ -1,4 +1,4 @@
-package constants
+package models
 
 type UserContactVerification struct {
 	ID                int  `json:"id" gorm:"primary_key"`

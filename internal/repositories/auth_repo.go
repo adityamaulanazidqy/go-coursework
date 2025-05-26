@@ -141,7 +141,7 @@ func (r *AuthenticationRepo) SignUp(req *auth.SignUpRequest) (resp auth.UserSign
 		Profile:           existingUser.Profile,
 	}
 
-	var contactVerification = constants.UserContactVerification{
+	var contactVerification = models.UserContactVerification{
 		UserID:            user.ID,
 		EmailVerified:     resp.EmailVerified,
 		TelephoneVerified: resp.TelephoneVerified,
