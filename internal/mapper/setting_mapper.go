@@ -25,7 +25,7 @@ func ExistingToUsers(exitingUser *models.Users, req *settings.UpdateUserInfo, fi
 		StudyProgramID: exitingUser.StudyProgramID,
 		Password:       exitingUser.Password,
 		RoleID:         exitingUser.RoleID,
-		Profile:        &filename,
+		Profile:        filename,
 		Batch:          exitingUser.Batch,
 	}
 }

@@ -1,0 +1,1 @@
+ALTER TABLE assignments RENAME COLUMN file_url TO filename;

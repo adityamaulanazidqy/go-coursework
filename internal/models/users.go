@@ -12,7 +12,7 @@ type Users struct {
 	Password            string                  `json:"password"`
 	RoleID              int                     `json:"role_id"`
 	Role                constants.Roles         `json:"role" gorm:"foreignkey:RoleID"`
-	Profile             *string                 `json:"profile"`
+	Profile             string                  `json:"profile" gorm:"default:icon_default.jpg"`
 	Batch               int                     `json:"batch"`
 	ContactVerification UserContactVerification `json:"contact_verification" gorm:"foreignkey:ID"`
 }

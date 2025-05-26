@@ -11,7 +11,7 @@ type UserSignUpResponse struct {
 	Password          string  `json:"-"`
 	Role              string  `json:"role"`
 	Batch             int     `json:"batch"`
-	Profile           *string `json:"profile"`
+	Profile           string  `json:"profile"`
 }
 
 type UserSignInResponse struct {

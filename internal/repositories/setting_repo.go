@@ -132,15 +132,15 @@ func (r *SettingRepo) UpdateUserInfo(req *settings.UpdateUserInfo, userID int) (
 			return resp, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails
 		}
 
-		if exitingUser.Profile != nil && *exitingUser.Profile != "" {
-			err = helpers.DeleteImages().Profile(*exitingUser.Profile)
+		if exitingUser.Profile != "" {
+			err = helpers.DeleteImages().Profile(exitingUser.Profile)
 			if err != nil {
 				r.logLogrus.LogUserError(exitingUser.Email, err, msgFailedDeleteProfile)
 			}
 		}
 	} else {
-		if exitingUser.Profile != nil {
-			filename = *exitingUser.Profile
+		if exitingUser.Profile != "" {
+			filename = exitingUser.Profile
 		}
 	}
 

@@ -8,7 +8,7 @@ type SetResponse struct {
 	StudyProgram string  `json:"study_program"`
 	Role         string  `json:"role"`
 	Batch        int     `json:"batch"`
-	Profile      *string `json:"profile"`
+	Profile      string  `json:"profile"`
 }
 
 type UpdateResponse struct {
@@ -19,5 +19,5 @@ type UpdateResponse struct {
 	StudyProgram string  `json:"study_program"`
 	Role         string  `json:"role"`
 	Batch        int     `json:"batch"`
-	Profile      *string `json:"profile"`
+	Profile      string  `json:"profile"`
 }

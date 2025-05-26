@@ -13,7 +13,7 @@ type SignUpRequest struct {
 	RoleID         int                     `json:"role_id"`
 	Role           constants.Roles         `json:"-" gorm:"foreignkey:RoleID"`
 	Batch          int                     `json:"batch"`
-	Profile        *string                 `json:"profile"`
+	Profile        string                  `json:"profile" gorm:"default:icon_default.jpg"`
 }
 
 type SignInRequest struct {

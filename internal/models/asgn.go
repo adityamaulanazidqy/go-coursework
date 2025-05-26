@@ -7,7 +7,7 @@ type Assignment struct {
 	LecturerID  int       `json:"lecturer_id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	FileURL     string    `json:"file_url"`
+	Filename    string    `json:"filename"`
 	Deadline    time.Time `json:"deadline"`
 	IsActive    bool      `json:"is_active"`
 }
