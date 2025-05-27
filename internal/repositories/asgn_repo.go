@@ -132,38 +132,37 @@ func (r *AssignmentRepo) GetAll() (
 
 	const op = "repositories.AssignmentRepo.GetAll"
 
-	var users []models.Users
-	if err := r.rctx.DB.
-		Preload("ContactVerification").
-		Preload("StudyProgram").
-		Preload("Role").
-		Find(&users).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
-		}
-
-		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
-	}
-
 	var assignments []models.Assignment
 	if err := r.rctx.DB.Find(&assignments).Error; err != nil {
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
-	for _, user := range users {
-		var lecturer = auth.UserSignUpResponse{
-			Username:          user.Username,
-			Email:             user.Email,
-			EmailVerified:     user.ContactVerification.EmailVerified,
-			Telephone:         user.Telephone,
-			TelephoneVerified: user.ContactVerification.TelephoneVerified,
-			StudyProgram:      user.StudyProgram.Name,
-			Role:              user.Role.Name,
-			Batch:             user.Batch,
-			Profile:           user.Profile,
+	for _, assignment := range assignments {
+		var users []models.Users
+		if err := r.rctx.DB.
+			Preload("ContactVerification").
+			Preload("StudyProgram").
+			Preload("Role").
+			Find(&users, "id = ?", assignment.LecturerID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+			}
+
+			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 		}
 
-		for _, assignment := range assignments {
+		for _, user := range users {
+			var lecturer = auth.UserSignUpResponse{
+				Username:          user.Username,
+				Email:             user.Email,
+				EmailVerified:     user.ContactVerification.EmailVerified,
+				Telephone:         user.Telephone,
+				TelephoneVerified: user.ContactVerification.TelephoneVerified,
+				Role:              user.Role.Name,
+				Batch:             user.Batch,
+				Profile:           user.Profile,
+			}
+
 			resp = append(resp, asgn.AssignmentResponse{
 				Lecturer:    lecturer,
 				Title:       assignment.Title,
@@ -197,6 +196,10 @@ func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.Assignm
 			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
 		}
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if user.ID != assignment.LecturerID {
+		return resp, fiber.StatusUnauthorized, op, errors.New("unauthorized: lecturer ID mismatch"), pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details
 	}
 
 	filename, err := helpers.SaveImages().Asgn(req.MultipartFile, req.FileHeader, "_")

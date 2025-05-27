@@ -104,4 +104,13 @@ var (
 			"If the problem persists, please contact support.",
 		},
 	}
+
+	ErrUnauthorized = ErrorMessage{
+		Message: "Unauthorized access",
+		Details: []string{
+			"You are not authorized to access or modify this resource.",
+			"Make sure you have the correct permissions.",
+			"This action can only be performed by the assigned lecturer or admin.",
+		},
+	}
 )
