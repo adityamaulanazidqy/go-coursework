@@ -225,3 +225,114 @@ func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.Assignm
 
 	return resp, http.StatusOK, op, nil, "Successfully updated assignment", nil
 }
+
+func (r *AssignmentRepo) Delete(req *models.Assignment) (
+	resp asgn.AssignmentResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentRepo.Delete"
+
+	var user models.Users
+	if err := r.rctx.DB.
+		Preload("StudyProgram").
+		Preload("Role").
+		Preload("ContactVerification").
+		First(&user, "id = ?", req.LecturerID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if err := r.rctx.DB.Model(&req).Where("id = ?", req.ID).Delete(&req).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrDeleteFailed.Message, pkgerr.ErrDeleteFailed.Details
+	}
+
+	resp = mapper.MapAssignmentToResponse(&user, req)
+
+	return resp, http.StatusOK, op, nil, "Successfully deleted assignment", nil
+}
+
+func (r *AssignmentRepo) Comment(req *asgn.AssignmentCommentRequest) (
+	resp asgn.CommentResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentRepo.Comment"
+
+	var user models.Users
+	if err := r.rctx.DB.
+		Preload("StudyProgram").
+		Preload("Role").
+		Preload("ContactVerification").
+		First(&user, "id = ?", req.UserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	var comment = models.AssignmentComment{
+		AssignmentID: req.AssignmentID,
+		UserID:       user.ID,
+		Content:      req.Content,
+	}
+
+	if err := r.rctx.DB.Create(&comment).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrCommentSave.Message, pkgerr.ErrCommentSave.Details
+	}
+
+	resp = mapper.MapCommentToResponse(&comment, &user)
+
+	return resp, fiber.StatusOK, op, nil, "Successfully created comment", nil
+}
+
+func (r *AssignmentRepo) GetCommentsByAssignmentID(assignmentID int) (
+	resp []asgn.CommentResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentRepo.GetCommentsByAssignmentID"
+
+	var comments []models.AssignmentComment
+	if err := r.rctx.DB.
+		Where("assignment_id = ?", assignmentID).
+		Order("created_at ASC").
+		Find(&comments).Error; err != nil {
+
+		return resp, fiber.StatusInternalServerError, op, err,
+			pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	for _, comment := range comments {
+		var user models.Users
+		if err := r.rctx.DB.
+			Preload("StudyProgram").
+			Preload("Role").
+			Preload("ContactVerification").
+			First(&user, "id = ?", comment.UserID).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return resp, fiber.StatusNotFound, op, err,
+					pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+			}
+
+			return resp, fiber.StatusInternalServerError, op, err,
+				pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+		}
+
+		resp = append(resp, mapper.MapCommentToResponse(&comment, &user))
+	}
+
+	return resp, fiber.StatusOK, op, nil, "Successfully fetched comments", nil
+}

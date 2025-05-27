@@ -77,4 +77,31 @@ var (
 			"Please try again or contact support if the problem persists.",
 		},
 	}
+
+	ErrDeleteFailed = ErrorMessage{
+		Message: "Failed to delete data",
+		Details: []string{
+			"The server failed to delete the requested resource from the database.",
+			"This might be due to a database error or the resource may not exist.",
+			"Please try again or contact support if the issue persists.",
+		},
+	}
+
+	ErrEmptyContent = ErrorMessage{
+		Message: "Empty content field",
+		Details: []string{
+			"The content field must not be empty.",
+			"Make sure to fill in the required fields in the request body.",
+			"Try again after entering valid content.",
+		},
+	}
+
+	ErrCommentSave = ErrorMessage{
+		Message: "Failed to save comment",
+		Details: []string{
+			"The comment could not be saved to the database.",
+			"Check for invalid data or internal server error.",
+			"If the problem persists, please contact support.",
+		},
+	}
 )

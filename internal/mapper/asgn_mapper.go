@@ -45,3 +45,21 @@ func MapAssignmentToResponse(user *models.Users, assignment *models.Assignment) 
 		Filename:    assignment.Filename,
 	}
 }
+
+func MapCommentToResponse(comment *models.AssignmentComment, user *models.Users) asgn.CommentResponse {
+	return asgn.CommentResponse{
+		User: auth.UserSignUpResponse{
+			Username:          user.Username,
+			Email:             user.Email,
+			EmailVerified:     user.ContactVerification.EmailVerified,
+			Telephone:         user.Telephone,
+			TelephoneVerified: user.ContactVerification.TelephoneVerified,
+			StudyProgram:      user.StudyProgram.Name,
+			Role:              user.Role.Name,
+			Batch:             user.Batch,
+			Profile:           user.Profile,
+		},
+		Content:   comment.Content,
+		CreatedAt: comment.CreatedAt,
+	}
+}

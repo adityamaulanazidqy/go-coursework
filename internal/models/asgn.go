@@ -21,7 +21,7 @@ type AssignmentComment struct {
 	AssignmentID int       `json:"assignment_id"`
 	UserID       int       `json:"user_id"`
 	Content      string    `json:"content"`
-	CreatedAt    time.Time `json:"created_at"`
+	CreatedAt    time.Time `json:"created_at" gorm:"default:CURRENT_TIMESTAMP"`
 }
 
 func (AssignmentComment) TableName() string {
