@@ -34,4 +34,47 @@ var (
 			"Check if the assignment ID is missing or malformed.",
 		},
 	}
+
+	ErrAssignmentNotFound = ErrorMessage{
+		Message: "Assignment Not Found",
+		Details: []string{
+			"Assignment ID is required in the request URL.",
+			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}.",
+			"Check if the assignment ID is missing or malformed.",
+		},
+	}
+
+	ErrBodyParse = ErrorMessage{
+		Message: "Failed to parse body",
+		Details: []string{
+			"One of the requests is not eligible",
+		},
+	}
+
+	ErrFileUpload = ErrorMessage{
+		Message: "Failed to upload file",
+		Details: []string{
+			"The file could not be uploaded or was not found in the request.",
+			"Make sure to include a valid file in the 'file' form field.",
+			"Supported formats and size limits may apply.",
+		},
+	}
+
+	ErrFileOpen = ErrorMessage{
+		Message: "Failed to open uploaded file",
+		Details: []string{
+			"The uploaded file could not be opened for processing.",
+			"This might be due to file corruption or internal server error.",
+			"Please try uploading the file again.",
+		},
+	}
+
+	ErrFileSave = ErrorMessage{
+		Message: "Failed to save file",
+		Details: []string{
+			"The uploaded file could not be saved to the server.",
+			"This may be due to permission issues, unsupported format, or internal errors.",
+			"Please try again or contact support if the problem persists.",
+		},
+	}
 )

@@ -6,7 +6,7 @@ import (
 	"go-coursework/internal/models"
 )
 
-func UserAndReqAsgnToAsgnResp(user models.Users, req *asgn.AssignmentRequest) asgn.AssignmentResponse {
+func UserAndReqAsgnToAsgnResp(user models.Users, req *asgn.AssignmentRequest, filename string) asgn.AssignmentResponse {
 	return asgn.AssignmentResponse{
 		Lecturer: auth.UserSignUpResponse{
 			Username:          user.Username,
@@ -20,7 +20,28 @@ func UserAndReqAsgnToAsgnResp(user models.Users, req *asgn.AssignmentRequest) as
 			Profile:           user.Profile,
 		},
 		Title:       req.Title,
+		Filename:    filename,
 		Description: req.Description,
 		Deadline:    req.Deadline,
+	}
+}
+
+func MapAssignmentToResponse(user *models.Users, assignment *models.Assignment) asgn.AssignmentResponse {
+	return asgn.AssignmentResponse{
+		Lecturer: auth.UserSignUpResponse{
+			Username:          user.Username,
+			Email:             user.Email,
+			EmailVerified:     user.ContactVerification.EmailVerified,
+			Telephone:         user.Telephone,
+			TelephoneVerified: user.ContactVerification.TelephoneVerified,
+			StudyProgram:      user.StudyProgram.Name,
+			Role:              user.Role.Name,
+			Batch:             user.Batch,
+			Profile:           user.Profile,
+		},
+		Title:       assignment.Title,
+		Description: assignment.Description,
+		Deadline:    assignment.Deadline,
+		Filename:    assignment.Filename,
 	}
 }
