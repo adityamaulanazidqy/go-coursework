@@ -1,0 +1,8 @@
+{
+  "message": "Unauthorized access",
+  "details": [
+    "You are not authorized to access or modify this resource.",
+    "Make sure you have the correct permissions.",
+    "This action can only be performed by the assigned lecturer or admin."
+  ]
+}

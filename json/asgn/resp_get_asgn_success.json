@@ -1,0 +1,20 @@
+{
+  "data": {
+    "lecturer": {
+      "username": "Sung Kang",
+      "email": "sungkang@gmail.com",
+      "email_verified": false,
+      "telephone": null,
+      "telephone_verified": false,
+      "study_program": "Informatics Engineering",
+      "role": "Lecturer",
+      "batch": 2025,
+      "profile": "icon_default.jpg"
+    },
+    "title": "Tugas Pemrograman Golang",
+    "filename": "1748335274045370400_desc_go.png",
+    "description": "Buat aplikasi REST API sederhana menggunakan Fiber dan GORM.",
+    "deadline": "2025-06-10T23:59:59Z"
+  },
+  "message": "Successfully retrieved Assignment"
+}

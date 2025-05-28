@@ -1,0 +1,8 @@
+{
+  "message": "Assignment not updated",
+  "details": [
+    "No changes were made to the assignment.",
+    "The submitted data might be the same as existing values.",
+    "Ensure the assignment ID is valid and the data is different."
+  ]
+}

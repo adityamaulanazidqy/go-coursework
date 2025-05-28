@@ -1,0 +1,18 @@
+{
+  "data": {
+    "user": {
+      "username": "Sung Kang",
+      "email": "sungkang@gmail.com",
+      "email_verified": false,
+      "telephone": null,
+      "telephone_verified": false,
+      "study_program": "Informatics Engineering",
+      "role": "Lecturer",
+      "batch": 2025,
+      "profile": "icon_default.jpg"
+    },
+    "content": "Ini testing dari sungkang",
+    "created_at": "2025-05-28T06:26:33.373132Z"
+  },
+  "message": "Successfully deleted comment"
+}

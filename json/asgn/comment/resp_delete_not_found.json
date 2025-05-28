@@ -1,0 +1,8 @@
+{
+  "message": "Comment(s) not found",
+  "details": [
+    "No comment(s) associated with the specified assignment ID were found.",
+    "Please check if the assignment has any comments.",
+    "Ensure the assignment ID is correct."
+  ]
+}

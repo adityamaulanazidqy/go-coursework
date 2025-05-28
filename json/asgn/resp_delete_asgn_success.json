@@ -1,0 +1,20 @@
+{
+  "data": {
+    "lecturer": {
+      "username": "Dwayne Johnson",
+      "email": "dwaynejohnson@gmail.com",
+      "email_verified": false,
+      "telephone": null,
+      "telephone_verified": false,
+      "study_program": "Informatics Management",
+      "role": "Lecturer",
+      "batch": 2025,
+      "profile": "icon_default.jpg"
+    },
+    "title": "Testing",
+    "filename": "1748385324462407100_middleware_flow.jpg",
+    "description": "In Go, middleware functions act as interceptors for HTTP requests, operating between the incoming request and the final handler.",
+    "deadline": "2025-06-11T23:59:59Z"
+  },
+  "message": "Successfully deleted assignment"
+}
