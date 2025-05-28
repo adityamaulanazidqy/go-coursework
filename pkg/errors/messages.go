@@ -113,4 +113,40 @@ var (
 			"This action can only be performed by the assigned lecturer or admin.",
 		},
 	}
+
+	ErrNoComments = ErrorMessage{
+		Message: "No comments found",
+		Details: []string{
+			"There are no comments for this assignment.",
+			"Comments may not have been submitted yet.",
+			"Try again later after someone has added a comment.",
+		},
+	}
+
+	ErrDeleteComment = ErrorMessage{
+		Message: "Failed to delete comment(s)",
+		Details: []string{
+			"The system failed to delete comment(s) associated with the assignment.",
+			"This may be due to a database error or missing comment(s).",
+			"Please check the assignment ID or try again later.",
+		},
+	}
+
+	ErrCommentNotFound = ErrorMessage{
+		Message: "Comment(s) not found",
+		Details: []string{
+			"No comment(s) associated with the specified assignment ID were found.",
+			"Please check if the assignment has any comments.",
+			"Ensure the assignment ID is correct.",
+		},
+	}
+
+	ErrAssignmentNotUpdated = ErrorMessage{
+		Message: "Assignment not updated",
+		Details: []string{
+			"No changes were made to the assignment.",
+			"The submitted data might be the same as existing values.",
+			"Ensure the assignment ID is valid and the data is different.",
+		},
+	}
 )

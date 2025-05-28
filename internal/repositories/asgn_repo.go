@@ -198,13 +198,14 @@ func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.Assignm
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
-	if user.ID != assignment.LecturerID {
-		return resp, fiber.StatusUnauthorized, op, errors.New("unauthorized: lecturer ID mismatch"), pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details
-	}
-
-	filename, err := helpers.SaveImages().Asgn(req.MultipartFile, req.FileHeader, "_")
-	if err != nil {
-		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrFileSave.Message, pkgerr.ErrFileSave.Details
+	if req.MultipartFile != nil && req.FileHeader != nil {
+		filename, err := helpers.SaveImages().Asgn(req.MultipartFile, req.FileHeader, "_")
+		if err != nil {
+			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrFileSave.Message, pkgerr.ErrFileSave.Details
+		}
+		if assignment.Filename != filename {
+			assignment.Filename = filename
+		}
 	}
 
 	if assignment.Title != req.Title {
@@ -213,15 +214,29 @@ func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.Assignm
 	if assignment.Description != req.Description {
 		assignment.Description = req.Description
 	}
-	if assignment.Filename != filename {
-		assignment.Filename = filename
-	}
 	if assignment.Deadline != req.Deadline {
 		assignment.Deadline = req.Deadline
 	}
 
-	if err := r.rctx.DB.Model(&assignment).Where("id = ?", assignment.ID).Updates(assignment).Error; err != nil {
-		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	noChange := assignment.Title == req.Title &&
+		assignment.Description == req.Description &&
+		assignment.Deadline.Equal(req.Deadline) &&
+		(req.FileHeader == nil || assignment.Filename == assignment.Filename)
+
+	if noChange {
+		return resp, http.StatusBadRequest, op, errors.New("no change"),
+			pkgerr.ErrAssignmentNotUpdated.Message, pkgerr.ErrAssignmentNotUpdated.Details
+	}
+
+	tx := r.rctx.DB.Model(&assignment).Where("id = ?", assignment.ID).Updates(assignment)
+	if tx.Error != nil {
+		return resp, fiber.StatusInternalServerError, op, tx.Error,
+			pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if tx.RowsAffected == 0 {
+		return resp, fiber.StatusNotFound, op, nil,
+			pkgerr.ErrAssignmentNotUpdated.Message, pkgerr.ErrAssignmentNotUpdated.Details
 	}
 
 	resp = mapper.MapAssignmentToResponse(&user, assignment)
@@ -337,5 +352,47 @@ func (r *AssignmentRepo) GetCommentsByAssignmentID(assignmentID int) (
 		resp = append(resp, mapper.MapCommentToResponse(&comment, &user))
 	}
 
+	if resp == nil {
+		return resp, fiber.StatusNotFound, op, err, pkgerr.ErrNoComments.Message, pkgerr.ErrNoComments.Details
+	}
+
 	return resp, fiber.StatusOK, op, nil, "Successfully fetched comments", nil
+}
+
+func (r *AssignmentRepo) DeleteComment(req *asgn.DeleteComment) (
+	resp asgn.CommentResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentRepo.DeleteComment"
+
+	var user models.Users
+	if err := r.rctx.DB.
+		Preload("StudyProgram").
+		Preload("Role").
+		Preload("ContactVerification").
+		First(&user, "id = ?", req.UserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	var comment models.AssignmentComment
+	if err := r.rctx.DB.First(&comment, "id = ?", req.CommentID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrCommentNotFound.Message, pkgerr.ErrCommentNotFound.Details
+		}
+	}
+
+	if err := r.rctx.DB.Model(&comment).Where("id = ?", req.CommentID).Delete(&comment).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrDeleteComment.Message, pkgerr.ErrDeleteComment.Details
+	}
+
+	resp = mapper.MapCommentToResponse(&comment, &user)
+
+	return resp, fiber.StatusOK, op, nil, "Successfully deleted comment", nil
 }
