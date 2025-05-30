@@ -4,6 +4,7 @@ import (
 	"go-coursework/internal/models"
 	"go-coursework/internal/routes/asgn"
 	"go-coursework/internal/routes/auth"
+	"go-coursework/internal/routes/constant"
 	"go-coursework/internal/routes/otp"
 	"go-coursework/internal/routes/settings"
 )
@@ -14,4 +15,5 @@ func SetupRoutes(rctx *models.RouterContext) {
 	settings.Setup(apiV1, rctx)
 	otp.Setup(apiV1, rctx)
 	asgn.Setup(apiV1, rctx)
+	constant.Setup(apiV1, rctx)
 }
