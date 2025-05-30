@@ -37,6 +37,7 @@ func (r *AuthenticationRepo) SignIn(req *auth.SignInRequest) (resp auth.UserSign
 		Preload("Role").
 		Preload("StudyProgram").
 		Preload("ContactVerification").
+		Preload("Semester").
 		First(&user, "email = ?", req.Email).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, fiber.StatusNotFound, opRepo, err, msgNotFound, msgDetailsNotFound
@@ -60,6 +61,7 @@ func (r *AuthenticationRepo) SignIn(req *auth.SignInRequest) (resp auth.UserSign
 		Telephone:         user.Telephone,
 		TelephoneVerified: user.ContactVerification.TelephoneVerified,
 		Role:              user.Role.Name,
+		Semester:          user.Semester.Name,
 		Token:             token,
 	}
 
@@ -108,10 +110,15 @@ func (r *AuthenticationRepo) SignUp(req *auth.SignUpRequest) (resp auth.UserSign
 
 	req.Password = string(hashPass)
 
+	if role.Name == "Lecturer" || role.Name == "Admin" {
+		req.SemesterID = 9
+	}
+
 	var user = models.Users{
 		Username:       req.Username,
 		Email:          req.Email,
 		StudyProgramID: req.StudyProgramID,
+		SemesterID:     req.SemesterID,
 		Password:       req.Password,
 		RoleID:         req.RoleID,
 		Batch:          req.Batch,
@@ -124,7 +131,8 @@ func (r *AuthenticationRepo) SignUp(req *auth.SignUpRequest) (resp auth.UserSign
 	if err := r.db.
 		Preload("Role").
 		Preload("StudyProgram").
-		Preload("ContactVerification").Where("id = ?", user.ID).
+		Preload("ContactVerification").
+		Preload("Semester").Where("id = ?", user.ID).
 		First(&existingUser).Error; err != nil {
 		return resp, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails
 	}
@@ -136,6 +144,7 @@ func (r *AuthenticationRepo) SignUp(req *auth.SignUpRequest) (resp auth.UserSign
 		Telephone:         req.Telephone,
 		TelephoneVerified: existingUser.ContactVerification.TelephoneVerified,
 		StudyProgram:      existingUser.StudyProgram.Name,
+		Semester:          existingUser.Semester.Name,
 		Role:              existingUser.Role.Name,
 		Batch:             req.Batch,
 		Profile:           existingUser.Profile,

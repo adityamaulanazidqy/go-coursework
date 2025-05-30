@@ -113,3 +113,12 @@ func (helper *DeleteImage) Profile(filename string) error {
 
 	return nil
 }
+
+func (helper *DeleteImage) Assignment(filename string) error {
+	err := os.Remove(fmt.Sprintf("assets/images/asgn/%s", filename))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

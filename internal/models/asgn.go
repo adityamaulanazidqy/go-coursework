@@ -3,13 +3,15 @@ package models
 import "time"
 
 type Assignment struct {
-	ID          int       `json:"id" gorm:"primary_key;"`
-	LecturerID  int       `json:"lecturer_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Filename    string    `json:"filename"`
-	Deadline    time.Time `json:"deadline"`
-	IsActive    bool      `json:"is_active"`
+	ID             int       `json:"id" gorm:"primary_key;"`
+	LecturerID     int       `json:"lecturer_id"`
+	SemesterID     int       `json:"semester_id"`
+	StudyProgramID int       `json:"study_program_id"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	Filename       string    `json:"filename"`
+	Deadline       time.Time `json:"deadline"`
+	IsActive       bool      `json:"is_active"`
 }
 
 func (Assignment) TableName() string {

@@ -11,6 +11,7 @@ func UsersToSetResponse(user *models.Users) settings.SetResponse {
 		Email:        user.Email,
 		Telephone:    user.Telephone,
 		StudyProgram: user.StudyProgram.Name,
+		Semester:     user.Semester.Name,
 		Role:         user.Role.Name,
 		Batch:        user.Batch,
 		Profile:      user.Profile,

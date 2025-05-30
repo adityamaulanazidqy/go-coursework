@@ -9,6 +9,7 @@ type SignUpRequest struct {
 	Telephone      *string                 `json:"telephone"`
 	StudyProgramID int                     `json:"study_program_id"`
 	StudyProgram   constants.StudyPrograms `json:"-" gorm:"foreignkey:StudyProgramID"`
+	SemesterID     int                     `json:"-" gorm:"default:1"`
 	Password       string                  `json:"password"`
 	RoleID         int                     `json:"role_id"`
 	Role           constants.Roles         `json:"-" gorm:"foreignkey:RoleID"`

@@ -9,6 +9,8 @@ type Users struct {
 	Telephone           *string                 `json:"telephone"`
 	StudyProgramID      int                     `json:"study_program_id"`
 	StudyProgram        constants.StudyPrograms `json:"study_program" gorm:"foreignkey:StudyProgramID"`
+	SemesterID          int                     `json:"semester_id"`
+	Semester            constants.Semesters     `json:"semester" gorm:"foreignkey:SemesterID"`
 	Password            string                  `json:"password"`
 	RoleID              int                     `json:"role_id"`
 	Role                constants.Roles         `json:"role" gorm:"foreignkey:RoleID"`

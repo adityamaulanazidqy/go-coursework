@@ -77,6 +77,7 @@ func (h *AuthenticationHandler) SignUp(ctx *fiber.Ctx) error {
 		h.logLogrus.LogUserError(req.Email, err, msgValidateError)
 		return h.logLogrus.LogRequestError(ctx, fiber.StatusBadRequest, op, err, msgValidateError, msgValidateErrorDetails)
 	}
+	req.SemesterID = 1
 
 	resp, code, opRepo, err, msg, details := h.authRepo.SignUp(&req)
 	if err != nil {

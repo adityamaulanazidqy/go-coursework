@@ -13,5 +13,7 @@
     <file url="file://$PROJECT_DIR$/migrations/4_rename_column_user_contact_verification.up.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/migrations/5_rename_column_assignments.down.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/migrations/5_rename_column_assignments.up.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/6_create_table_semesters.down.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/migrations/6_create_table_semesters.up.sql" dialect="PostgreSQL" />
   </component>
 </project>

@@ -45,6 +45,7 @@ func (r *SettingRepo) SetProfile(req *settings.SetProfile, userID int) (resp set
 	if err := r.db.
 		Preload("StudyProgram").
 		Preload("Role").
+		Preload("Semester").
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -79,6 +80,7 @@ func (r *SettingRepo) SetTelephone(req *settings.SetTelephone, userID int) (resp
 	if err := r.db.
 		Preload("StudyProgram").
 		Preload("Role").
+		Preload("Semester").
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -153,6 +155,7 @@ func (r *SettingRepo) UpdateUserInfo(req *settings.UpdateUserInfo, userID int) (
 	if err := r.db.
 		Preload("StudyProgram").
 		Preload("Role").
+		Preload("Semester").
 		Where("id = ?", userID).
 		First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -160,6 +163,16 @@ func (r *SettingRepo) UpdateUserInfo(req *settings.UpdateUserInfo, userID int) (
 		}
 
 		return resp, fiber.StatusInternalServerError, op, err, msgInternalServerError, msgInternalServerErrorDetails
+	}
+
+	resp = settings.UpdateResponse{
+		Username:     user.Username,
+		Email:        user.Email,
+		Telephone:    user.Telephone,
+		StudyProgram: user.StudyProgram.Name,
+		Role:         user.Role.Name,
+		Batch:        user.Batch,
+		Profile:      user.Profile,
 	}
 
 	return resp, fiber.StatusCreated, opRepo, nil, "Successfully Update User", nil

@@ -36,7 +36,9 @@ func (r *AssignmentRepo) Post(req *asgn.AssignmentRequest) (
 	if err := r.rctx.DB.
 		Preload("StudyProgram").
 		Preload("Role").
-		Preload("ContactVerification").Where("id = ?", req.LecturerID).
+		Preload("ContactVerification").
+		Preload("Semester").
+		Where("id = ?", req.LecturerID).
 		First(&user, req.LecturerID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, fiber.StatusNotFound, op, err,
@@ -55,12 +57,14 @@ func (r *AssignmentRepo) Post(req *asgn.AssignmentRequest) (
 	}
 
 	var assignment = models.Assignment{
-		LecturerID:  req.LecturerID,
-		Title:       req.Title,
-		Description: req.Description,
-		Filename:    filename,
-		Deadline:    req.Deadline,
-		IsActive:    req.IsActive,
+		LecturerID:     req.LecturerID,
+		SemesterID:     req.SemesterID,
+		StudyProgramID: req.StudyProgramID,
+		Title:          req.Title,
+		Description:    req.Description,
+		Filename:       filename,
+		Deadline:       req.Deadline,
+		IsActive:       req.IsActive,
 	}
 
 	if err := r.rctx.DB.Create(&assignment).Error; err != nil {
@@ -90,6 +94,7 @@ func (r *AssignmentRepo) Get(req *models.Assignment) (
 		Preload("ContactVerification").
 		Preload("StudyProgram").
 		Preload("Role").
+		Preload("Semester").
 		First(&user, "id = ?", req.LecturerID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
@@ -121,7 +126,7 @@ func (r *AssignmentRepo) Get(req *models.Assignment) (
 	return resp, http.StatusOK, op, nil, "Successfully retrieved Assignment", nil
 }
 
-func (r *AssignmentRepo) GetAll() (
+func (r *AssignmentRepo) GetAll(userID int) (
 	resp []asgn.AssignmentResponse,
 	code int,
 	opRepo string,
@@ -132,9 +137,30 @@ func (r *AssignmentRepo) GetAll() (
 
 	const op = "repositories.AssignmentRepo.GetAll"
 
-	var assignments []models.Assignment
-	if err := r.rctx.DB.Find(&assignments).Error; err != nil {
+	var (
+		semesterID     int
+		studyProgramID int
+	)
+
+	var exitingUser models.Users
+	if err := r.rctx.DB.Where("id = ?", userID).Find(&exitingUser).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	semesterID = exitingUser.SemesterID
+	studyProgramID = exitingUser.StudyProgramID
+
+	var assignments []models.Assignment
+	if err := r.rctx.DB.Where("semester_id = ? AND study_program_id = ?", semesterID, studyProgramID).Find(&assignments).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if len(assignments) == 0 {
+		err = errors.New("no assignments found")
+		return resp, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details
 	}
 
 	for _, assignment := range assignments {
@@ -143,6 +169,7 @@ func (r *AssignmentRepo) GetAll() (
 			Preload("ContactVerification").
 			Preload("StudyProgram").
 			Preload("Role").
+			Preload("Semester").
 			Find(&users, "id = ?", assignment.LecturerID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
@@ -158,6 +185,8 @@ func (r *AssignmentRepo) GetAll() (
 				EmailVerified:     user.ContactVerification.EmailVerified,
 				Telephone:         user.Telephone,
 				TelephoneVerified: user.ContactVerification.TelephoneVerified,
+				StudyProgram:      user.StudyProgram.Name,
+				Semester:          user.Semester.Name,
 				Role:              user.Role.Name,
 				Batch:             user.Batch,
 				Profile:           user.Profile,
@@ -176,7 +205,7 @@ func (r *AssignmentRepo) GetAll() (
 	return resp, http.StatusOK, op, nil, "Successfully retrieved Assignments", nil
 }
 
-func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.AssignmentRequest) (
+func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.AssignmentUpdateRequest) (
 	resp asgn.AssignmentResponse,
 	code int,
 	opRepo string,
@@ -186,57 +215,83 @@ func (r *AssignmentRepo) Update(assignment *models.Assignment, req *asgn.Assignm
 ) {
 	const op = "repositories.AssignmentRepo.Update"
 
-	var user models.Users
-	if err := r.rctx.DB.
-		Preload("StudyProgram").
-		Preload("Role").
-		Preload("ContactVerification").
-		First(&user, "id = ?", assignment.LecturerID).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
-		}
-		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	hasChanges := false
+	updateFields := make(map[string]interface{})
+
+	if req.Title != "" && assignment.Title != req.Title {
+		hasChanges = true
+		updateFields["title"] = req.Title
 	}
 
+	if req.Description != "" && assignment.Description != req.Description {
+		hasChanges = true
+		updateFields["description"] = req.Description
+	}
+
+	if !assignment.Deadline.Equal(req.Deadline) {
+		hasChanges = true
+		updateFields["deadline"] = req.Deadline
+	}
+
+	var oldFilename string
 	if req.MultipartFile != nil && req.FileHeader != nil {
-		filename, err := helpers.SaveImages().Asgn(req.MultipartFile, req.FileHeader, "_")
-		if err != nil {
-			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrFileSave.Message, pkgerr.ErrFileSave.Details
-		}
-		if assignment.Filename != filename {
-			assignment.Filename = filename
-		}
+		hasChanges = true
+		oldFilename = assignment.Filename
 	}
 
-	if assignment.Title != req.Title {
-		assignment.Title = req.Title
-	}
-	if assignment.Description != req.Description {
-		assignment.Description = req.Description
-	}
-	if assignment.Deadline != req.Deadline {
-		assignment.Deadline = req.Deadline
-	}
-
-	noChange := assignment.Title == req.Title &&
-		assignment.Description == req.Description &&
-		assignment.Deadline.Equal(req.Deadline) &&
-		(req.FileHeader == nil || assignment.Filename == assignment.Filename)
-
-	if noChange {
+	if !hasChanges {
 		return resp, http.StatusBadRequest, op, errors.New("no change"),
 			pkgerr.ErrAssignmentNotUpdated.Message, pkgerr.ErrAssignmentNotUpdated.Details
 	}
 
-	tx := r.rctx.DB.Model(&assignment).Where("id = ?", assignment.ID).Updates(assignment)
-	if tx.Error != nil {
-		return resp, fiber.StatusInternalServerError, op, tx.Error,
+	tx := r.rctx.DB.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if req.MultipartFile != nil && req.FileHeader != nil {
+		filename, err := helpers.SaveImages().Asgn(req.MultipartFile, req.FileHeader, "_")
+		if err != nil {
+			return resp, fiber.StatusInternalServerError, op, err,
+				pkgerr.ErrFileSave.Message, pkgerr.ErrFileSave.Details
+		}
+		updateFields["filename"] = filename
+		assignment.Filename = filename
+	}
+
+	var user models.Users
+	if err := tx.
+		Preload("StudyProgram").
+		Preload("Role").
+		Preload("ContactVerification").
+		Preload("Semester").
+		First(&user, "id = ?", assignment.LecturerID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err,
+				pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+		return resp, fiber.StatusInternalServerError, op, err,
 			pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
-	if tx.RowsAffected == 0 {
-		return resp, fiber.StatusNotFound, op, nil,
-			pkgerr.ErrAssignmentNotUpdated.Message, pkgerr.ErrAssignmentNotUpdated.Details
+	if err := tx.Model(&models.Assignment{}).
+		Where("id = ?", assignment.ID).
+		Updates(updateFields).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err,
+			pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if oldFilename != "" {
+		if err := helpers.DeleteImages().Assignment(oldFilename); err != nil {
+			r.rctx.Logger.Logger.Error("failed to delete old file")
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err,
+			pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
 	resp = mapper.MapAssignmentToResponse(&user, assignment)
@@ -395,4 +450,67 @@ func (r *AssignmentRepo) DeleteComment(req *asgn.DeleteComment) (
 	resp = mapper.MapCommentToResponse(&comment, &user)
 
 	return resp, fiber.StatusOK, op, nil, "Successfully deleted comment", nil
+}
+
+func (r *AssignmentRepo) GetAssignmentLecturer(lecturerID int) (
+	resp []asgn.AssignmentResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+
+	const op = "repositories.AssignmentRepo.GetAssignmentLecturer"
+
+	var assignments []models.Assignment
+	if err := r.rctx.DB.Where("lecturer_id = ?", lecturerID).Find(&assignments).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if len(assignments) == 0 {
+		err = errors.New("no assignments found")
+		return resp, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details
+	}
+
+	for _, assignment := range assignments {
+		var users []models.Users
+		if err := r.rctx.DB.
+			Preload("ContactVerification").
+			Preload("StudyProgram").
+			Preload("Role").
+			Preload("Semester").
+			Find(&users, "id = ?", assignment.LecturerID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+			}
+
+			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+		}
+
+		for _, user := range users {
+			var lecturer = auth.UserSignUpResponse{
+				Username:          user.Username,
+				Email:             user.Email,
+				EmailVerified:     user.ContactVerification.EmailVerified,
+				Telephone:         user.Telephone,
+				TelephoneVerified: user.ContactVerification.TelephoneVerified,
+				StudyProgram:      user.StudyProgram.Name,
+				Semester:          user.Semester.Name,
+				Role:              user.Role.Name,
+				Batch:             user.Batch,
+				Profile:           user.Profile,
+			}
+
+			resp = append(resp, asgn.AssignmentResponse{
+				Lecturer:    lecturer,
+				Title:       assignment.Title,
+				Filename:    assignment.Filename,
+				Description: assignment.Description,
+				Deadline:    assignment.Deadline,
+			})
+		}
+	}
+
+	return resp, http.StatusOK, op, nil, "Successfully retrieved Assignments", nil
 }

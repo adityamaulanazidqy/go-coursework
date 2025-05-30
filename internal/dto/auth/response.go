@@ -8,6 +8,7 @@ type UserSignUpResponse struct {
 	Telephone         *string `json:"telephone"`
 	TelephoneVerified bool    `json:"telephone_verified"`
 	StudyProgram      string  `json:"study_program"`
+	Semester          string  `json:"semester"`
 	Password          string  `json:"-"`
 	Role              string  `json:"role"`
 	Batch             int     `json:"batch"`
@@ -20,5 +21,6 @@ type UserSignInResponse struct {
 	Telephone         *string `json:"telephone"`
 	TelephoneVerified bool    `json:"telephone_verified"`
 	Role              string  `json:"role"`
+	Semester          string  `json:"semester"`
 	Token             string  `json:"token"`
 }
