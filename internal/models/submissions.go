@@ -7,8 +7,8 @@ type Submission struct {
 	AssignmentID        int       `json:"assignment_id"`
 	StudentID           int       `json:"student_id"`
 	FileURL             string    `json:"file_url"`
-	SubmittedAt         time.Time `json:"submitted_at"`
-	StatusSubmissionsID int       `json:"status_submissions_id"`
+	SubmittedAt         time.Time `json:"submitted_at" gorm:"autoCreateTime"`
+	StatusSubmissionsID int       `json:"status_submissions_id" gorm:"default:1"`
 }
 
 func (Submission) TableName() string {

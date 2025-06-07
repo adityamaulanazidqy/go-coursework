@@ -1,8 +1,21 @@
 {
-  "username": "Sung Kang",
-  "email": "sungkang@gmail.com",
-  "study_program_id": 1,
-  "password": "sungkang",
-  "role_id": 3,
-  "batch": 2025
+  "account": [
+    {
+      "username": "Sung Kang",
+      "email": "sungkang@gmail.com",
+      "study_program_id": 1,
+      "password": "sungkang",
+      "role_id": 3,
+      "batch": 2025
+    },
+    {
+      "username": "Gabrielle Echols",
+      "email": "gabrielle@gmail.com",
+      "study_program_id": 1,
+      "password": "gabrielle",
+      "role_id": 2,
+      "batch": 2020
+    }
+  ]
 }
+

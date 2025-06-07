@@ -6,6 +6,7 @@ import (
 )
 
 type AssignmentResponse struct {
+	ID          int                     `json:"id"`
 	Lecturer    auth.UserSignUpResponse `json:"lecturer"`
 	Title       string                  `json:"title"`
 	Filename    string                  `json:"filename"`
@@ -17,4 +18,11 @@ type CommentResponse struct {
 	User      auth.UserSignUpResponse `json:"user"`
 	Content   string                  `json:"content"`
 	CreatedAt time.Time               `json:"created_at"`
+}
+
+type SubmissionResponse struct {
+	User        auth.UserSignUpResponse `json:"user"`
+	Assignment  AssignmentResponse      `json:"assignment"`
+	Status      string                  `json:"status"`
+	SubmittedAt time.Time               `json:"submitted_at"`
 }

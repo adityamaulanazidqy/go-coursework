@@ -251,3 +251,48 @@ func (h *AssignmentsHandler) GetAssignmentLecturer(ctx *fiber.Ctx) error {
 		"data":    resp,
 	})
 }
+
+func (h *AssignmentsHandler) Submissions(ctx *fiber.Ctx) error {
+	const op = "handler.AssignmentsHandler.Submit"
+
+	user, ok := ctx.Locals("user").(*jwt.Claims)
+	if !ok || user == nil {
+		err := errors.New(pkgerr.ErrMissingClaims.Message)
+		h.rctx.Logger.LogUserError("-", err, pkgerr.ErrMissingClaims.Message)
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingClaims.Message, pkgerr.ErrMissingClaims.Details)
+	}
+
+	assignment, ok := ctx.Locals("assignment").(*models.Assignment)
+	if !ok || assignment == nil {
+		err := errors.New(pkgerr.ErrAssignmentNotFound.Message)
+		h.rctx.Logger.LogUserError(user.Email, err, pkgerr.ErrAssignmentNotFound.Message)
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details)
+	}
+
+	var req asgn.SubmissionRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		h.rctx.Logger.LogUserError(user.Email, err, pkgerr.ErrBodyParse.Message)
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusBadRequest, op, err, pkgerr.ErrBodyParse.Message, pkgerr.ErrBodyParse.Details)
+	}
+
+	if time.Now().After(assignment.Deadline) {
+		err := errors.New("The deadline has passed")
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusBadRequest, op, err, pkgerr.ErrAssignmentDeadlinePassed.Message, pkgerr.ErrAssignmentDeadlinePassed.Details)
+	}
+
+	submission := models.Submission{
+		AssignmentID: assignment.ID,
+		StudentID:    user.UserID,
+		FileURL:      req.FileURL,
+	}
+
+	respRepo, code, opRepo, err, msg, details := h.asgnRepo.Submissions(&submission, *assignment)
+	if err != nil {
+		return h.rctx.Logger.LogRequestError(ctx, code, opRepo, err, msg, details)
+	}
+
+	return ctx.Status(code).JSON(fiber.Map{
+		"message": msg,
+		"data":    respRepo,
+	})
+}

@@ -16,10 +16,12 @@ func Setup(router fiber.Router, rctx *models.RouterContext) {
 		assignmentGroup.Get("/lecturer", jwt.Middleware("Lecturer"), controller.GetAssignmentLecturer)
 
 		assignmentGroup.Post("", jwt.Middleware("Lecturer", "Admin"), controller.Post)
-		assignmentGroup.Get("/all", jwt.Middleware("Student"), controller.GetAll)
+		assignmentGroup.Get("/all", jwt.Middleware("Student", "Admin"), controller.GetAll)
 		assignmentGroup.Get("/:id", jwt.Middleware("Lecturer", "Admin", "Student"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Get)
 		assignmentGroup.Put("/:id", jwt.Middleware("Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Update)
 		assignmentGroup.Delete("/:id", jwt.Middleware("Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Delete)
+
+		assignmentGroup.Post("/:id/submissions", jwt.Middleware("Student"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Submissions)
 
 		commentGroup := assignmentGroup.Group("/:id/comments")
 		{

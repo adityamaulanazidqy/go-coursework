@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"go-coursework/constants"
 	"go-coursework/internal/dto/asgn"
 	"go-coursework/internal/dto/auth"
 	"go-coursework/internal/helpers"
@@ -11,6 +13,8 @@ import (
 	pkgerr "go-coursework/pkg/errors"
 	"gorm.io/gorm"
 	"net/http"
+	"sync"
+	"time"
 )
 
 type AssignmentRepo struct {
@@ -73,7 +77,7 @@ func (r *AssignmentRepo) Post(req *asgn.AssignmentRequest) (
 			pkgerr.ErrInternalServer.Details
 	}
 
-	resp = mapper.UserAndReqAsgnToAsgnResp(user, req, filename)
+	resp = mapper.UserAndReqAsgnToAsgnResp(user, req, filename, assignment.ID)
 
 	return resp, http.StatusOK, op, nil, "Successfully created Assignment", nil
 }
@@ -116,6 +120,7 @@ func (r *AssignmentRepo) Get(req *models.Assignment) (
 	}
 
 	resp = asgn.AssignmentResponse{
+		ID:          req.ID,
 		Lecturer:    lecturer,
 		Title:       req.Title,
 		Filename:    req.Filename,
@@ -193,6 +198,7 @@ func (r *AssignmentRepo) GetAll(userID int) (
 			}
 
 			resp = append(resp, asgn.AssignmentResponse{
+				ID:          assignment.ID,
 				Lecturer:    lecturer,
 				Title:       assignment.Title,
 				Filename:    assignment.Filename,
@@ -503,6 +509,7 @@ func (r *AssignmentRepo) GetAssignmentLecturer(lecturerID int) (
 			}
 
 			resp = append(resp, asgn.AssignmentResponse{
+				ID:          assignment.ID,
 				Lecturer:    lecturer,
 				Title:       assignment.Title,
 				Filename:    assignment.Filename,
@@ -513,4 +520,111 @@ func (r *AssignmentRepo) GetAssignmentLecturer(lecturerID int) (
 	}
 
 	return resp, http.StatusOK, op, nil, "Successfully retrieved Assignments", nil
+}
+
+func (r *AssignmentRepo) Submissions(submission *models.Submission, assignment models.Assignment) (
+	resp asgn.SubmissionResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentsRepo.Submissions"
+
+	var (
+		wg             sync.WaitGroup
+		userResult     models.Users
+		lecturerResult models.Users
+		errOnce        sync.Once
+		firstErr       error
+	)
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		user, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+		if e != nil {
+			errOnce.Do(func() {
+				firstErr = e
+				code = c
+				opRepo = o
+				msg = m
+				details = d
+			})
+			return
+		}
+		userResult = user
+	}()
+
+	go func() {
+		defer wg.Done()
+		lecturer, c, o, e, m, d := r.searchUserSignUpResponse(assignment.LecturerID)
+		if e != nil {
+			errOnce.Do(func() {
+				firstErr = e
+				code = c
+				opRepo = o
+				msg = m
+				details = d
+			})
+			return
+		}
+		lecturerResult = lecturer
+	}()
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return resp, code, opRepo, firstErr, msg, details
+	}
+
+	var existingSubmissions models.Submission
+	if err := r.rctx.DB.Where("assignment_id = ? AND student_id = ?", submission.AssignmentID, submission.StudentID).First(&existingSubmissions).Error; err == nil {
+		err = errors.New("submission already exists")
+		return resp, fiber.StatusConflict, op, err, pkgerr.ErrSubmissionAlreadyExists.Message, pkgerr.ErrSubmissionAlreadyExists.Details
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := r.rctx.DB.WithContext(ctx).Create(&submission).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrSubmissionFailed.Message, pkgerr.ErrSubmissionFailed.Details
+	}
+
+	var status constants.StatusSubmissions
+	if err := r.rctx.DB.Where("id = ?", submission.StatusSubmissionsID).First(&status).Error; err != nil {
+		return asgn.SubmissionResponse{}, fiber.StatusInternalServerError, op, err, pkgerr.ErrSubmissionStatusNotFound.Message, pkgerr.ErrSubmissionStatusNotFound.Details
+	}
+
+	resp = mapper.MapSubmissionResponse(userResult, lecturerResult, assignment, status.Name, submission.SubmittedAt)
+
+	return resp, fiber.StatusCreated, op, nil, "Successfully Submission", nil
+}
+
+func (r *AssignmentRepo) searchUserSignUpResponse(id int) (
+	user models.Users,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentsRepo.searchUserSignUpResponse"
+
+	if err := r.rctx.DB.
+		Preload("StudyProgram").
+		Preload("Semester").
+		Preload("Role").
+		Preload("ContactVerification").
+		Where("id = ?", id).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return user, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+
+		return user, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	return user, fiber.StatusOK, op, nil, "Successfully searching data user", nil
 }

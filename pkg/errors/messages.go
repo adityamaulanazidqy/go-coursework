@@ -149,4 +149,40 @@ var (
 			"Ensure the assignment ID is valid and the data is different.",
 		},
 	}
+
+	ErrSubmissionStatusNotFound = ErrorMessage{
+		Message: "Submission status not found",
+		Details: []string{
+			"The specified submission status ID could not be found.",
+			"This might indicate an invalid status ID provided or a data integrity issue.",
+			"Please ensure the submission status is valid. If the problem persists, contact support.",
+		},
+	}
+
+	ErrAssignmentDeadlinePassed = ErrorMessage{
+		Message: "Assignment deadline has passed",
+		Details: []string{
+			"The submission could not be processed because the assignment deadline has already passed.",
+			"Please check the assignment details for the correct submission period.",
+			"Late submissions are not allowed for this assignment.",
+		},
+	}
+
+	ErrSubmissionFailed = ErrorMessage{
+		Message: "Failed to submit assignment",
+		Details: []string{
+			"There was an issue processing your assignment submission.",
+			"This might be due to a problem with your submission data or a temporary server issue.",
+			"Please check your input and try again. If the problem persists, contact support.",
+		},
+	}
+
+	ErrSubmissionAlreadyExists = ErrorMessage{
+		Message: "Submission already exists",
+		Details: []string{
+			"A submission for this assignment by this student already exists.",
+			"Only one submission is allowed per student for this assignment.",
+			"If you need to update your submission, please use the update endpoint or contact the lecturer.",
+		},
+	}
 )

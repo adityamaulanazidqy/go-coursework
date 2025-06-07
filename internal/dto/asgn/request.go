@@ -41,3 +41,7 @@ type DeleteComment struct {
 	AssignmentID int    `json:"-"`
 	CommentID    string `json:"-"`
 }
+
+type SubmissionRequest struct {
+	FileURL string `json:"file_url"`
+}
