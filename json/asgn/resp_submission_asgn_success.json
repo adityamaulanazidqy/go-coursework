@@ -1,0 +1,38 @@
+{
+  "data": {
+    "user": {
+      "username": "Zidqy",
+      "email": "zidqy@gmail.com",
+      "email_verified": false,
+      "telephone": null,
+      "telephone_verified": false,
+      "study_program": "Informatics Engineering",
+      "semester": "One",
+      "role": "Student",
+      "batch": 2024,
+      "profile": "icon_default.jpg"
+    },
+    "assignment": {
+      "id": 1,
+      "lecturer": {
+        "username": "Gabrielle Echols",
+        "email": "gabrielle@gmail.com",
+        "email_verified": false,
+        "telephone": null,
+        "telephone_verified": false,
+        "study_program": "Informatics Engineering",
+        "semester": "Special",
+        "role": "Lecturer",
+        "batch": 2020,
+        "profile": "icon_default.jpg"
+      },
+      "title": "Testing",
+      "filename": "1749286014035201100_middleware_flow.jpg",
+      "description": "In Go, middleware functions act as interceptors for HTTP requests, operating between the incoming request and the final handler.",
+      "deadline": "2025-06-11T23:59:59Z"
+    },
+    "status": "Pending",
+    "submitted_at": "2025-06-07T15:51:23.3502502+07:00"
+  },
+  "message": "Successfully Submission"
+}

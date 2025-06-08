@@ -30,8 +30,16 @@ var (
 		Message: "Missing assignment ID",
 		Details: []string{
 			"Assignment ID is required in the request URL.",
-			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}/comments.",
 			"Check if the assignment ID is missing or malformed.",
+		},
+	}
+
+	ErrMissingSubmissionID = ErrorMessage{
+		Message: "Missing submission ID",
+		Details: []string{
+			"Submission ID is required in the request URL.",
+			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}/submissions/grade.",
+			"Check if the submission ID is missing or malformed.",
 		},
 	}
 
@@ -40,6 +48,15 @@ var (
 		Details: []string{
 			"Assignment ID is required in the request URL.",
 			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}.",
+			"Check if the assignment ID is missing or malformed.",
+		},
+	}
+
+	ErrSubmissionNotFound = ErrorMessage{
+		Message: "Submission Not Found",
+		Details: []string{
+			"Submission ID is required in the request URL.",
+			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}/submissions/grade.",
 			"Check if the assignment ID is missing or malformed.",
 		},
 	}
@@ -183,6 +200,15 @@ var (
 			"A submission for this assignment by this student already exists.",
 			"Only one submission is allowed per student for this assignment.",
 			"If you need to update your submission, please use the update endpoint or contact the lecturer.",
+		},
+	}
+
+	ErrStatusSubmissionNotFound = ErrorMessage{
+		Message: "Submission status not found",
+		Details: []string{
+			"The specified submission status ID does not exist.",
+			"Please verify the status ID provided is valid.",
+			"Contact support if you believe this is an internal configuration error.",
 		},
 	}
 )

@@ -27,3 +27,16 @@ type SubmissionHistories struct {
 func (SubmissionHistories) TableName() string {
 	return "submission_histories"
 }
+
+type SubmissionGrades struct {
+	ID           int       `json:"id" gorm:"primary_key;"`
+	SubmissionID int       `json:"submission_id"`
+	LecturerID   int       `json:"lecturer_id"`
+	Grade        int       `json:"grade"`
+	Notes        *string   `json:"notes"`
+	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
+}
+
+func (SubmissionGrades) TableName() string {
+	return "submission_grades"
+}

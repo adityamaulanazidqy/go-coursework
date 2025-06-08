@@ -26,3 +26,15 @@ type SubmissionResponse struct {
 	Status      string                  `json:"status"`
 	SubmittedAt time.Time               `json:"submitted_at"`
 }
+
+type GetSubmissionsResponse struct {
+	ID          int                     `json:"id"`
+	User        auth.UserSignUpResponse `json:"user"`
+	Status      string                  `json:"status"`
+	SubmittedAt time.Time               `json:"submitted_at"`
+}
+
+type SubmissionGradeResponse struct {
+	Submission SubmissionResponse      `json:"submission"`
+	Lecturer   auth.UserSignUpResponse `json:"lecturer"`
+}

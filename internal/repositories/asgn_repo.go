@@ -628,3 +628,210 @@ func (r *AssignmentRepo) searchUserSignUpResponse(id int) (
 
 	return user, fiber.StatusOK, op, nil, "Successfully searching data user", nil
 }
+
+func (r *AssignmentRepo) GetSubmission(assignmentID int) (
+	resp asgn.GetSubmissionsResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentsRepo.GetSubmissions"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var submissions models.Submission
+	if err := r.rctx.DB.WithContext(ctx).Where("id = ?", assignmentID).Find(&submissions).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			err := errors.New("submissions not found")
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionNotFound.Message, pkgerr.ErrSubmissionNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	u, c, o, e, m, d := r.searchUserSignUpResponse(submissions.StudentID)
+	if e != nil {
+		return resp, c, o, e, m, d
+	}
+
+	user := mapper.MapUserToUserSignUpResponse(u)
+
+	var status constants.StatusSubmissions
+	if err := r.rctx.DB.Where("id = ?", submissions.StatusSubmissionsID).First(&status).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionStatusNotFound.Message, pkgerr.ErrSubmissionStatusNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	resp = asgn.GetSubmissionsResponse{
+		ID:          submissions.ID,
+		User:        *user,
+		Status:      status.Name,
+		SubmittedAt: submissions.SubmittedAt,
+	}
+
+	return resp, fiber.StatusOK, op, nil, "Successfully searching data submission", nil
+}
+
+func (r *AssignmentRepo) GetSubmissions(assignmentID int) (
+	resp []asgn.GetSubmissionsResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentsRepo.GetSubmissions"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var submissions []models.Submission
+	if err := r.rctx.DB.WithContext(ctx).Find(&submissions).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if len(submissions) == 0 {
+		err := errors.New("submissions not found")
+		return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionNotFound.Message, pkgerr.ErrSubmissionNotFound.Details
+	}
+
+	for _, submission := range submissions {
+		if submission.AssignmentID == assignmentID {
+			u, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+			if e != nil {
+				return resp, c, o, e, m, d
+			}
+
+			user := mapper.MapUserToUserSignUpResponse(u)
+
+			var status constants.StatusSubmissions
+			if err := r.rctx.DB.Where("id = ?", submission.StatusSubmissionsID).First(&status).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionStatusNotFound.Message, pkgerr.ErrSubmissionStatusNotFound.Details
+				}
+
+				return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+			}
+
+			resp = append(resp, asgn.GetSubmissionsResponse{
+				ID:          submission.ID,
+				User:        *user,
+				Status:      status.Name,
+				SubmittedAt: submission.SubmittedAt,
+			})
+		}
+	}
+
+	return resp, fiber.StatusOK, op, nil, "Successfully searching data submissions", nil
+}
+
+func (r *AssignmentRepo) SubmissionGrade(req asgn.SubmissionGradeRequest, submission *models.Submission) (
+	resp asgn.SubmissionGradeResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentsRepo.SubmissionGrade"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+
+	var assignment models.Assignment
+	if err := r.rctx.DB.WithContext(ctx).Where("id = ?", submission.AssignmentID).First(&assignment).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrMissingAsgnID.Message, pkgerr.ErrMissingAsgnID.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if *req.LecturerID != assignment.LecturerID {
+		err := errors.New("unauthorized lecturer")
+		return resp, fiber.StatusUnauthorized, op, err, pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details
+	}
+
+	var submissionGrade = models.SubmissionGrades{
+		SubmissionID: *req.SubmissionID,
+		LecturerID:   *req.LecturerID,
+		Grade:        req.Grade,
+		Notes:        &req.Notes,
+	}
+
+	tx := r.rctx.DB.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.WithContext(ctx).Create(&submissionGrade).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if err := tx.Model(&models.Submission{}).Where("id = ?", submission.ID).Update("StatusSubmissionsID", req.StatusID).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	u, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+	if e != nil {
+		return resp, c, o, e, m, d
+	}
+
+	var (
+		wg                 sync.WaitGroup
+		userResponse       *auth.UserSignUpResponse
+		assignmentResponse asgn.AssignmentResponse
+	)
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		userResponse = mapper.MapUserToUserSignUpResponse(u)
+	}()
+
+	go func() {
+		defer wg.Done()
+		assignmentResponse = mapper.MapAssignmentToResponse(&u, &assignment)
+	}()
+
+	wg.Wait()
+
+	var status constants.StatusSubmissions
+	if err := r.rctx.DB.WithContext(ctx).Where("id = ?", submission.StatusSubmissionsID).First(&status).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	submissionResponse := asgn.SubmissionResponse{
+		User:        *userResponse,
+		Assignment:  assignmentResponse,
+		Status:      status.Name,
+		SubmittedAt: submission.SubmittedAt,
+	}
+
+	l, c, o, e, m, d := r.searchUserSignUpResponse(*req.LecturerID)
+	if e != nil {
+		return resp, c, o, e, m, d
+	}
+
+	lecturerResponse := mapper.MapUserToUserSignUpResponse(l)
+
+	resp = asgn.SubmissionGradeResponse{
+		Submission: submissionResponse,
+		Lecturer:   *lecturerResponse,
+	}
+
+	return resp, fiber.StatusOK, op, nil, "Successfully submitted data submissions", nil
+}

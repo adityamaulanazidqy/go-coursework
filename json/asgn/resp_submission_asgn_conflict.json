@@ -1,0 +1,8 @@
+{
+  "message": "Submission already exists",
+  "details": [
+    "A submission for this assignment by this student already exists.",
+    "Only one submission is allowed per student for this assignment.",
+    "If you need to update your submission, please use the update endpoint or contact the lecturer."
+  ]
+}

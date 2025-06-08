@@ -1,0 +1,8 @@
+{
+  "message": "Assignment deadline has passed",
+  "details": [
+    "The submission could not be processed because the assignment deadline has already passed.",
+    "Please check the assignment details for the correct submission period.",
+    "Late submissions are not allowed for this assignment."
+  ]
+}

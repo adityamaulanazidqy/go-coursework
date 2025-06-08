@@ -45,3 +45,11 @@ type DeleteComment struct {
 type SubmissionRequest struct {
 	FileURL string `json:"file_url"`
 }
+
+type SubmissionGradeRequest struct {
+	SubmissionID *int   `json:"-"`
+	LecturerID   *int   `json:"-"`
+	StatusID     int    `json:"status_id"`
+	Grade        int    `json:"grade"`
+	Notes        string `json:"notes"`
+}

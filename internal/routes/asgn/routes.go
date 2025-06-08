@@ -15,19 +15,22 @@ func Setup(router fiber.Router, rctx *models.RouterContext) {
 	{
 		assignmentGroup.Get("/lecturer", jwt.Middleware("Lecturer"), controller.GetAssignmentLecturer)
 
-		assignmentGroup.Post("", jwt.Middleware("Lecturer", "Admin"), controller.Post)
-		assignmentGroup.Get("/all", jwt.Middleware("Student", "Admin"), controller.GetAll)
-		assignmentGroup.Get("/:id", jwt.Middleware("Lecturer", "Admin", "Student"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Get)
-		assignmentGroup.Put("/:id", jwt.Middleware("Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Update)
-		assignmentGroup.Delete("/:id", jwt.Middleware("Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Delete)
+		assignmentGroup.Post("", jwt.Middleware("Lecturer"), controller.Post)
+		assignmentGroup.Get("/all", jwt.Middleware("Student"), controller.GetAll)
+		assignmentGroup.Get("/:id", jwt.Middleware("Lecturer", "Student"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Get)
+		assignmentGroup.Put("/:id", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Update)
+		assignmentGroup.Delete("/:id", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Delete)
 
 		assignmentGroup.Post("/:id/submissions", jwt.Middleware("Student"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Submissions)
+		assignmentGroup.Get("/:id/submission", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.GetSubmission)
+		assignmentGroup.Get("/:id/submissions", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.GetSubmissions)
+		assignmentGroup.Post("/:submission_id/submissions/grade", jwt.Middleware("Lecturer"), asgnmiddleware.SubmissionExistMiddleware(rctx), controller.SubmissionGrade)
 
 		commentGroup := assignmentGroup.Group("/:id/comments")
 		{
 			commentGroup.Post("", jwt.Middleware("Student", "Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Comment)
-			commentGroup.Get("", jwt.Middleware("Student", "Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.GetComments)
-			commentGroup.Delete("/:comment_id", jwt.Middleware("Lecturer", "Admin"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.DeleteComment)
+			commentGroup.Get("", jwt.Middleware("Student", "Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.GetComments)
+			commentGroup.Delete("/:comment_id", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.DeleteComment)
 		}
 	}
 }

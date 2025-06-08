@@ -107,3 +107,18 @@ func MapSubmissionResponse(user models.Users, lecturer models.Users, assignment 
 	}
 
 }
+
+func MapUserToUserSignUpResponse(user models.Users) *auth.UserSignUpResponse {
+	return &auth.UserSignUpResponse{
+		Username:          user.Username,
+		Email:             user.Email,
+		EmailVerified:     user.ContactVerification.EmailVerified,
+		Telephone:         user.Telephone,
+		TelephoneVerified: user.ContactVerification.TelephoneVerified,
+		StudyProgram:      user.StudyProgram.Name,
+		Semester:          user.Semester.Name,
+		Role:              user.Role.Name,
+		Batch:             user.Batch,
+		Profile:           user.Profile,
+	}
+}
