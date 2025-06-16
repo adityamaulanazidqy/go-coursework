@@ -314,7 +314,7 @@ func (h *AssignmentsHandler) GetSubmission(ctx *fiber.Ctx) error {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details)
 	}
 
-	if user.UserID != assignment.ID {
+	if user.UserID != assignment.LecturerID {
 		err := errors.New("The user does not own this assignment")
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusUnauthorized, op, err, pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details)
 	}
@@ -348,7 +348,12 @@ func (h *AssignmentsHandler) GetSubmissions(ctx *fiber.Ctx) error {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details)
 	}
 
-	if user.UserID != assignment.ID {
+	if user.UserID != assignment.LecturerID {
+		h.rctx.Logger.Logger.Infoln(fiber.Map{
+			"userID":               user.UserID,
+			"assignmentLecturerID": assignment.LecturerID,
+		})
+
 		err := errors.New("The user does not own this assignment")
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusUnauthorized, op, err, pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details)
 	}
@@ -396,6 +401,37 @@ func (h *AssignmentsHandler) SubmissionGrade(ctx *fiber.Ctx) error {
 	resp, code, opRepo, err, msg, details := h.asgnRepo.SubmissionGrade(req, submission)
 	if err != nil {
 		h.rctx.Logger.LogUserError(lecturer.Email, err, msg)
+		return h.rctx.Logger.LogRequestError(ctx, code, opRepo, err, msg, details)
+	}
+
+	return ctx.Status(code).JSON(fiber.Map{
+		"message": msg,
+		"data":    resp,
+	})
+}
+
+func (h *AssignmentsHandler) UpdateSubmission(ctx *fiber.Ctx) error {
+	const op = "handler.AssignmentsHandler.UpdateSubmission"
+
+	user, err := getUserClaims(ctx)
+	if err != nil {
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingClaims.Message, pkgerr.ErrMissingClaims.Details)
+	}
+
+	submission, err := getSubmissionClaims(ctx)
+	if err != nil {
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingSubmissionID.Message, pkgerr.ErrMissingSubmissionID.Details)
+	}
+
+	var req asgn.SubmissionUpdateRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		h.rctx.Logger.LogUserError(user.Email, err, pkgerr.ErrBodyParse.Message)
+		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusBadRequest, op, err, pkgerr.ErrBodyParse.Message, pkgerr.ErrBodyParse.Details)
+	}
+
+	resp, code, opRepo, err, msg, details := h.asgnRepo.UpdateSubmission(req, *submission, user.UserID)
+	if err != nil {
+		h.rctx.Logger.LogUserError(user.Email, err, msg)
 		return h.rctx.Logger.LogRequestError(ctx, code, opRepo, err, msg, details)
 	}
 

@@ -71,10 +71,42 @@ func (r *AssignmentRepo) Post(req *asgn.AssignmentRequest) (
 		IsActive:       req.IsActive,
 	}
 
-	if err := r.rctx.DB.Create(&assignment).Error; err != nil {
+	tx := r.rctx.DB.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Create(&assignment).Error; err != nil {
 		return resp, fiber.StatusInternalServerError, op, err,
 			pkgerr.ErrInternalServer.Message,
 			pkgerr.ErrInternalServer.Details
+	}
+
+	var users []models.Users
+	if err := tx.Where("semester_id = ? AND study_program_id = ?", assignment.SemesterID, assignment.StudyProgramID).Find(&users).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	for _, u := range users {
+		var record = models.Submission{
+			AssignmentID: assignment.ID,
+			StudentID:    u.ID,
+			FileURL:      "-",
+		}
+
+		if err := tx.Create(&record).Error; err != nil {
+			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
 	resp = mapper.UserAndReqAsgnToAsgnResp(user, req, filename, assignment.ID)
@@ -581,24 +613,27 @@ func (r *AssignmentRepo) Submissions(submission *models.Submission, assignment m
 	}
 
 	var existingSubmissions models.Submission
-	if err := r.rctx.DB.Where("assignment_id = ? AND student_id = ?", submission.AssignmentID, submission.StudentID).First(&existingSubmissions).Error; err == nil {
-		err = errors.New("submission already exists")
-		return resp, fiber.StatusConflict, op, err, pkgerr.ErrSubmissionAlreadyExists.Message, pkgerr.ErrSubmissionAlreadyExists.Details
+	if err := r.rctx.DB.Where("assignment_id = ? AND student_id = ?", submission.AssignmentID, submission.StudentID).First(&existingSubmissions).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionNotFound.Message, pkgerr.ErrSubmissionNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrSubmissionFailed.Message, pkgerr.ErrSubmissionFailed.Details
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := r.rctx.DB.WithContext(ctx).Create(&submission).Error; err != nil {
+	if err := r.rctx.DB.WithContext(ctx).Where("id = ?", 2).Updates(&submission).Error; err != nil {
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrSubmissionFailed.Message, pkgerr.ErrSubmissionFailed.Details
 	}
 
 	var status constants.StatusSubmissions
-	if err := r.rctx.DB.Where("id = ?", submission.StatusSubmissionsID).First(&status).Error; err != nil {
+	if err := r.rctx.DB.Where("id = ?", existingSubmissions.StatusSubmissionsID).First(&status).Error; err != nil {
 		return asgn.SubmissionResponse{}, fiber.StatusInternalServerError, op, err, pkgerr.ErrSubmissionStatusNotFound.Message, pkgerr.ErrSubmissionStatusNotFound.Details
 	}
 
-	resp = mapper.MapSubmissionResponse(userResult, lecturerResult, assignment, status.Name, submission.SubmittedAt)
+	resp = mapper.MapSubmissionResponse(userResult, lecturerResult, assignment, status.Name, time.Now())
 
 	return resp, fiber.StatusCreated, op, nil, "Successfully Submission", nil
 }
@@ -728,6 +763,11 @@ func (r *AssignmentRepo) GetSubmissions(assignmentID int) (
 		}
 	}
 
+	if len(resp) == 0 {
+		err := errors.New("submissions not found")
+		return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionNotFound.Message, pkgerr.ErrSubmissionNotFound.Details
+	}
+
 	return resp, fiber.StatusOK, op, nil, "Successfully searching data submissions", nil
 }
 
@@ -834,4 +874,73 @@ func (r *AssignmentRepo) SubmissionGrade(req asgn.SubmissionGradeRequest, submis
 	}
 
 	return resp, fiber.StatusOK, op, nil, "Successfully submitted data submissions", nil
+}
+
+func (r *AssignmentRepo) UpdateSubmission(req asgn.SubmissionUpdateRequest, submission models.Submission, userID int) (
+	resp asgn.SubmissionUpdateResponse,
+	code int,
+	opRepo string,
+	err error,
+	msg string,
+	details []string,
+) {
+	const op = "repositories.AssignmentRepo.UpdateSubmission"
+
+	u, c, o, e, m, d := r.searchUserSignUpResponse(userID)
+	if e != nil {
+		return resp, c, o, e, m, d
+	}
+
+	var user = mapper.MapUserToUserSignUpResponse(u)
+
+	var assignment models.Assignment
+	if err := r.rctx.DB.Where("id = ?", submission.AssignmentID).First(&assignment).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	var existingSubmission models.Submission
+	if err := r.rctx.DB.Where("id = ?", req.SubmissionID).First(&existingSubmission).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusNotFound, op, err, pkgerr.ErrSubmissionNotFound.Message, pkgerr.ErrSubmissionNotFound.Details
+		}
+
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	if req.FileURL == existingSubmission.FileURL {
+		return resp, fiber.StatusConflict, op, err, pkgerr.ErrFileConflict.Message, pkgerr.ErrFileConflict.Details
+	}
+
+	var submissionHistories = models.SubmissionHistories{
+		SubmissionID: req.SubmissionID,
+		FileURL:      req.FileURL,
+		Notes:        &req.Notes,
+	}
+
+	if err := r.rctx.DB.Create(&submissionHistories).Error; err != nil {
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	var asgnResp = mapper.MapAssignmentToResponse(&u, &assignment)
+
+	var status constants.StatusSubmissions
+	if err := r.rctx.DB.Where("id = ?", submission.StatusSubmissionsID).First(&status).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrStatusSubmissionNotFound.Message, pkgerr.ErrStatusSubmissionNotFound.Details
+		}
+		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
+	}
+
+	resp = asgn.SubmissionUpdateResponse{
+		User:       *user,
+		Assignment: asgnResp,
+		Status:     status.Name,
+		UpdatedAt:  time.Now(),
+	}
+
+	return resp, fiber.StatusInternalServerError, op, nil, "Successfully updated submissions", nil
 }

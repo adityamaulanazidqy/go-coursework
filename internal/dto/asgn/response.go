@@ -38,3 +38,10 @@ type SubmissionGradeResponse struct {
 	Submission SubmissionResponse      `json:"submission"`
 	Lecturer   auth.UserSignUpResponse `json:"lecturer"`
 }
+
+type SubmissionUpdateResponse struct {
+	User       auth.UserSignUpResponse `json:"user"`
+	Assignment AssignmentResponse      `json:"assignment"`
+	Status     string                  `json:"status"`
+	UpdatedAt  time.Time               `json:"updated_at"`
+}

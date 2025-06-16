@@ -32,7 +32,7 @@ func RateLimiter() fiber.Handler {
 	})
 
 	return limiter.New(limiter.Config{
-		Max:        5,
+		Max:        20,
 		Expiration: 1 * time.Minute,
 		Storage:    storage,
 		KeyGenerator: func(ctx *fiber.Ctx) string {

@@ -53,3 +53,9 @@ type SubmissionGradeRequest struct {
 	Grade        int    `json:"grade"`
 	Notes        string `json:"notes"`
 }
+
+type SubmissionUpdateRequest struct {
+	SubmissionID int    `json:"submission_id"`
+	FileURL      string `json:"file_url"`
+	Notes        string `json:"notes"`
+}

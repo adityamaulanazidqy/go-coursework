@@ -56,7 +56,6 @@ var (
 		Message: "Submission Not Found",
 		Details: []string{
 			"Submission ID is required in the request URL.",
-			"Make sure the endpoint follows the correct format, e.g., /assignments/{id}/submissions/grade.",
 			"Check if the assignment ID is missing or malformed.",
 		},
 	}
@@ -164,6 +163,15 @@ var (
 			"No changes were made to the assignment.",
 			"The submitted data might be the same as existing values.",
 			"Ensure the assignment ID is valid and the data is different.",
+		},
+	}
+
+	ErrFileConflict = ErrorMessage{
+		Message: "File URL conflict",
+		Details: []string{
+			"The submitted file URL is identical to an existing one.",
+			"Please provide a different file URL.",
+			"Verify that the file you are uploading is unique.",
 		},
 	}
 

@@ -8,6 +8,7 @@ type Submission struct {
 	StudentID           int       `json:"student_id"`
 	FileURL             string    `json:"file_url"`
 	SubmittedAt         time.Time `json:"submitted_at" gorm:"autoCreateTime"`
+	UpdatedAt           time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 	StatusSubmissionsID int       `json:"status_submissions_id" gorm:"default:1"`
 }
 
@@ -16,12 +17,11 @@ func (Submission) TableName() string {
 }
 
 type SubmissionHistories struct {
-	ID                  int       `json:"id" gorm:"primary_key;"`
-	SubmissionID        int       `json:"submission_id"`
-	FileURL             string    `json:"file_url"`
-	StatusSubmissionsID int       `json:"status_submissions_id"`
-	ChangedAt           time.Time `json:"changed_at"`
-	Notes               *string   `json:"notes"`
+	ID           int       `json:"id" gorm:"primary_key;"`
+	SubmissionID int       `json:"submission_id"`
+	FileURL      string    `json:"file_url"`
+	ChangedAt    time.Time `json:"changed_at" gorm:"autoUpdateTime"`
+	Notes        *string   `json:"notes"`
 }
 
 func (SubmissionHistories) TableName() string {

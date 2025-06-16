@@ -11,9 +11,10 @@ INSERT INTO study_programs (name) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO status_submissions (id, name) VALUES
-(1, 'Pending'),
-(2, 'Revision Required'),
-(3, 'Accepted')
+(1, 'Not Yet Collected'),
+(2, 'Pending'),
+(3, 'Revision Required'),
+(4, 'Accepted')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE users

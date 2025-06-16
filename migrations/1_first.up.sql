@@ -65,6 +65,7 @@ CREATE TABLE submissions (
   student_id INT NOT NULL,
   file_url TEXT NOT NULL,
   submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   status_submissions_id INT DEFAULT 1,
   CONSTRAINT fk_assignment FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
   CONSTRAINT fk_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -75,11 +76,9 @@ CREATE TABLE submission_histories (
   id SERIAL PRIMARY KEY,
   submission_id INT NOT NULL,
   file_url TEXT NOT NULL,
-  status_submissions_id INT NOT NULL,
   changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   notes TEXT DEFAULT NULL,
-  CONSTRAINT fk_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
-  CONSTRAINT fk_status_history FOREIGN KEY (status_submissions_id) REFERENCES status_submissions(id) ON DELETE CASCADE
+  CONSTRAINT fk_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
 );
 
 CREATE TABLE notifications (
