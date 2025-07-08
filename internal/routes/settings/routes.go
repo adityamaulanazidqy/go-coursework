@@ -8,7 +8,7 @@ import (
 )
 
 func Setup(router fiber.Router, ctx *models.RouterContext) {
-	controller := settings.NewSettingHandler(ctx.DB, ctx.Logger)
+	controller := settings.NewSettingHandler(ctx)
 	SettingGroup := router.Group("/setting")
 	{
 		SetGroup := SettingGroup.Group("/set")

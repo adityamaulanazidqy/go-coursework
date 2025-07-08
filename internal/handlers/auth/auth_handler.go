@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 	"go-coursework/internal/dto/auth"
+	"go-coursework/internal/handlers/notification"
 	"go-coursework/internal/helpers"
 	"go-coursework/internal/logger"
 	"go-coursework/internal/repositories"
@@ -18,6 +19,7 @@ type AuthenticationHandler struct {
 	logLogrus   *logger.ErrorLogger
 	redisClient *redis.Client
 	authRepo    *repositories.AuthenticationRepo
+	fcmHandler  *notification.FCMHandler
 }
 
 func NewAuthenticationHandler(db *gorm.DB, logLogrus *logger.ErrorLogger, redisClient *redis.Client) *AuthenticationHandler {

@@ -2,6 +2,7 @@ package asgn
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"go-coursework/internal/handlers/asgn"
 	"go-coursework/internal/models"
 	asgnmiddleware "go-coursework/pkg/asgn"
@@ -32,6 +33,15 @@ func Setup(router fiber.Router, rctx *models.RouterContext) {
 			commentGroup.Post("", jwt.Middleware("Student", "Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.Comment)
 			commentGroup.Get("", jwt.Middleware("Student", "Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.GetComments)
 			commentGroup.Delete("/:comment_id", jwt.Middleware("Lecturer"), asgnmiddleware.AssignmentExistMiddleware(rctx), controller.DeleteComment)
+		}
+
+		searchGroup := assignmentGroup.Group("/search")
+		{
+			searchGroup.Get("/:id/submissions/ws",
+				jwt.MiddlewareSocket("Lecturer"),
+				asgnmiddleware.AssignmentExistMiddleware(rctx),
+				websocket.New(controller.SearchSubmissionWS),
+			)
 		}
 	}
 }

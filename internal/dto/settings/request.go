@@ -8,7 +8,7 @@ type SetProfile struct {
 }
 
 type SetTelephone struct {
-	Telephone string `json:"telephone"`
+	Telephone int `json:"telephone"`
 }
 
 type UpdateUserInfo struct {

@@ -4,24 +4,29 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 	"go-coursework/internal/dto/settings"
+	"go-coursework/internal/handlers/otp"
 	"go-coursework/internal/logger"
+	"go-coursework/internal/models"
 	"go-coursework/internal/repositories"
+	pkgerr "go-coursework/pkg/errors"
 	"go-coursework/pkg/jwt"
 	"gorm.io/gorm"
 	"mime/multipart"
 )
 
 type SettingHandler struct {
-	db          *gorm.DB
-	logLogrus   *logger.ErrorLogger
-	SettingRepo *repositories.SettingRepo
+	db           *gorm.DB
+	logLogrus    *logger.ErrorLogger
+	SettingRepo  *repositories.SettingRepo
+	waOtpHandler *otp.WaVerificationHandler
 }
 
-func NewSettingHandler(db *gorm.DB, logLogrus *logger.ErrorLogger) *SettingHandler {
+func NewSettingHandler(rctx *models.RouterContext) *SettingHandler {
 	return &SettingHandler{
-		db:          db,
-		logLogrus:   logLogrus,
-		SettingRepo: repositories.NewSettingRepo(db),
+		db:           rctx.DB,
+		logLogrus:    rctx.Logger,
+		SettingRepo:  repositories.NewSettingRepo(rctx.DB),
+		waOtpHandler: otp.NewWaVerificationHandler(rctx),
 	}
 }
 
@@ -100,6 +105,12 @@ func (h *SettingHandler) SetTelephone(ctx *fiber.Ctx) error {
 	if err != nil {
 		h.logLogrus.LogUserError(claims.Email, err, msg)
 		return h.logLogrus.LogRequestError(ctx, code, opRepo, err, msg, details)
+	}
+
+	m, e := h.waOtpHandler.SendMessageWaOTP(claims.UserID, req.Telephone)
+	if e != nil {
+		h.logLogrus.LogUserError(claims.Email, e, m)
+		return h.logLogrus.LogRequestError(ctx, fiber.StatusInternalServerError, op, e, pkgerr.ErrSendOTPWa.Message, pkgerr.ErrSendOTPWa.Details)
 	}
 
 	return ctx.Status(code).JSON(fiber.Map{

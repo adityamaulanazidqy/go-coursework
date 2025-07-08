@@ -51,7 +51,10 @@ func Middleware(allowedRoles ...string) fiber.Handler {
 		tokenStr := parts[1]
 		claims := &Claims{}
 
-		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (
+			interface{},
+			error,
+		) {
 			return jwtSecret, nil
 		})
 
@@ -94,7 +97,67 @@ func Middleware(allowedRoles ...string) fiber.Handler {
 	}
 }
 
-func GenerateToken(userID int, email, role string) (string, error) {
+func MiddlewareSocket(allowedRoles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		tokenStr := c.Query("token")
+		if tokenStr == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+				Message: "Missing token",
+				Details: nil,
+			})
+		}
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (
+			interface{},
+			error,
+		) {
+			return jwtSecret, nil
+		})
+
+		if err != nil || !token.Valid {
+			return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+				Message: "Invalid or expired token",
+				Details: nil,
+			})
+		}
+
+		if redisClient != nil {
+			ctxRedis := context.Background()
+			blacklisted, err := redisClient.Get(ctxRedis, "blacklist:"+tokenStr).Result()
+			if err == nil && blacklisted == "true" {
+				return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{
+					Message: "Token has been logged out",
+					Details: nil,
+				})
+			}
+		}
+
+		if len(allowedRoles) > 0 {
+			roleMatch := false
+			for _, role := range allowedRoles {
+				if claims.Roles == role {
+					roleMatch = true
+					break
+				}
+			}
+			if !roleMatch {
+				return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse{
+					Message: "Forbidden",
+					Details: nil,
+				})
+			}
+		}
+
+		c.Locals("user", claims)
+		return c.Next()
+	}
+}
+
+func GenerateToken(userID int, email, role string) (
+	string,
+	error,
+) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	claims := &Claims{
@@ -111,7 +174,10 @@ func GenerateToken(userID int, email, role string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-func ExtractTokenFromHeader(c *fiber.Ctx) (string, error) {
+func ExtractTokenFromHeader(c *fiber.Ctx) (
+	string,
+	error,
+) {
 	bearerToken := c.Get("Authorization")
 	parts := strings.Split(bearerToken, " ")
 	if len(parts) == 2 && parts[0] == "Bearer" {
@@ -121,9 +187,15 @@ func ExtractTokenFromHeader(c *fiber.Ctx) (string, error) {
 	return "", errors.New("invalid token format")
 }
 
-func VerifyToken(tokenStr string) (*Claims, error) {
+func VerifyToken(tokenStr string) (
+	*Claims,
+	error,
+) {
 	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (
+		interface{},
+		error,
+	) {
 		return jwtSecret, nil
 	})
 

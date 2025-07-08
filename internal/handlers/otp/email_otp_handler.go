@@ -12,6 +12,7 @@ import (
 	"go-coursework/internal/dto"
 	"go-coursework/internal/dto/otp"
 	"go-coursework/internal/logger"
+	"go-coursework/internal/models"
 	"go-coursework/internal/repositories"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
@@ -25,14 +26,16 @@ type EmailVerificationHandler struct {
 	logLogrus   *logger.ErrorLogger
 	redisClient *redis.Client
 	otpRepo     *repositories.OtpRepo
+	rctx        *models.RouterContext
 }
 
-func NewEmailVerification(db *gorm.DB, logLogrus *logger.ErrorLogger, redisClient *redis.Client) *EmailVerificationHandler {
+func NewEmailVerification(db *gorm.DB, logLogrus *logger.ErrorLogger, redisClient *redis.Client, rctx *models.RouterContext) *EmailVerificationHandler {
 	return &EmailVerificationHandler{
 		db:          db,
 		logLogrus:   logLogrus,
 		redisClient: redisClient,
 		otpRepo:     repositories.NewOtpRepo(db),
+		rctx:        rctx,
 	}
 }
 
@@ -56,7 +59,11 @@ func (h *EmailVerificationHandler) generateOtpEmail() string {
 	return fmt.Sprintf("%06d", rand.Intn(1000000))
 }
 
-func (h *EmailVerificationHandler) sendEmail(to, otp string) (dto.Response, int, error) {
+func (h *EmailVerificationHandler) sendEmail(to, otp string) (
+	dto.Response,
+	int,
+	error,
+) {
 	m := gomail.NewMessage()
 	m.SetHeader("From", "adityamaullana234@gmail.com")
 	m.SetHeader("To", to)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"github.com/sirupsen/logrus"
 	"go-coursework/constants"
 	"go-coursework/internal/dto/asgn"
 	"go-coursework/internal/dto/auth"
@@ -13,6 +14,7 @@ import (
 	pkgerr "go-coursework/pkg/errors"
 	"gorm.io/gorm"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -576,7 +578,7 @@ func (r *AssignmentRepo) Submissions(submission *models.Submission, assignment m
 
 	go func() {
 		defer wg.Done()
-		user, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+		user, c, o, e, m, d := r.SearchUserSignUpResponse(submission.StudentID)
 		if e != nil {
 			errOnce.Do(func() {
 				firstErr = e
@@ -592,7 +594,7 @@ func (r *AssignmentRepo) Submissions(submission *models.Submission, assignment m
 
 	go func() {
 		defer wg.Done()
-		lecturer, c, o, e, m, d := r.searchUserSignUpResponse(assignment.LecturerID)
+		lecturer, c, o, e, m, d := r.SearchUserSignUpResponse(assignment.LecturerID)
 		if e != nil {
 			errOnce.Do(func() {
 				firstErr = e
@@ -635,10 +637,17 @@ func (r *AssignmentRepo) Submissions(submission *models.Submission, assignment m
 
 	resp = mapper.MapSubmissionResponse(userResult, lecturerResult, assignment, status.Name, time.Now())
 
+	if err := r.rctx.RedisClient.Publish(ctx, "submissions_updates", "update").Err(); err != nil {
+		r.rctx.Logger.Logger.WithFields(logrus.Fields{
+			"operation": op,
+			"message":   err.Error(),
+		}).Warn("Failed to publish submissions update message", err, nil)
+	}
+
 	return resp, fiber.StatusCreated, op, nil, "Successfully Submission", nil
 }
 
-func (r *AssignmentRepo) searchUserSignUpResponse(id int) (
+func (r *AssignmentRepo) SearchUserSignUpResponse(id int) (
 	user models.Users,
 	code int,
 	opRepo string,
@@ -646,7 +655,7 @@ func (r *AssignmentRepo) searchUserSignUpResponse(id int) (
 	msg string,
 	details []string,
 ) {
-	const op = "repositories.AssignmentsRepo.searchUserSignUpResponse"
+	const op = "repositories.AssignmentsRepo.SearchUserSignUpResponse"
 
 	if err := r.rctx.DB.
 		Preload("StudyProgram").
@@ -687,7 +696,7 @@ func (r *AssignmentRepo) GetSubmission(assignmentID int) (
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
-	u, c, o, e, m, d := r.searchUserSignUpResponse(submissions.StudentID)
+	u, c, o, e, m, d := r.SearchUserSignUpResponse(submissions.StudentID)
 	if e != nil {
 		return resp, c, o, e, m, d
 	}
@@ -738,7 +747,7 @@ func (r *AssignmentRepo) GetSubmissions(assignmentID int) (
 
 	for _, submission := range submissions {
 		if submission.AssignmentID == assignmentID {
-			u, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+			u, c, o, e, m, d := r.SearchUserSignUpResponse(submission.StudentID)
 			if e != nil {
 				return resp, c, o, e, m, d
 			}
@@ -824,7 +833,7 @@ func (r *AssignmentRepo) SubmissionGrade(req asgn.SubmissionGradeRequest, submis
 		return resp, fiber.StatusInternalServerError, op, err, pkgerr.ErrInternalServer.Message, pkgerr.ErrInternalServer.Details
 	}
 
-	u, c, o, e, m, d := r.searchUserSignUpResponse(submission.StudentID)
+	u, c, o, e, m, d := r.SearchUserSignUpResponse(submission.StudentID)
 	if e != nil {
 		return resp, c, o, e, m, d
 	}
@@ -861,7 +870,7 @@ func (r *AssignmentRepo) SubmissionGrade(req asgn.SubmissionGradeRequest, submis
 		SubmittedAt: submission.SubmittedAt,
 	}
 
-	l, c, o, e, m, d := r.searchUserSignUpResponse(*req.LecturerID)
+	l, c, o, e, m, d := r.SearchUserSignUpResponse(*req.LecturerID)
 	if e != nil {
 		return resp, c, o, e, m, d
 	}
@@ -886,7 +895,7 @@ func (r *AssignmentRepo) UpdateSubmission(req asgn.SubmissionUpdateRequest, subm
 ) {
 	const op = "repositories.AssignmentRepo.UpdateSubmission"
 
-	u, c, o, e, m, d := r.searchUserSignUpResponse(userID)
+	u, c, o, e, m, d := r.SearchUserSignUpResponse(userID)
 	if e != nil {
 		return resp, c, o, e, m, d
 	}
@@ -943,4 +952,42 @@ func (r *AssignmentRepo) UpdateSubmission(req asgn.SubmissionUpdateRequest, subm
 	}
 
 	return resp, fiber.StatusInternalServerError, op, nil, "Successfully updated submissions", nil
+}
+
+func (r *AssignmentRepo) SearchSubmissionsWS(a *models.Assignment, q string) (
+	[]asgn.SubmissionResponse,
+	error,
+) {
+	lect, _, _, _, _, _ := r.SearchUserSignUpResponse(a.LecturerID)
+
+	var submissions []models.Submission
+	err := r.rctx.DB.
+		Where("assignment_id = ?", a.ID).
+		Find(&submissions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []asgn.SubmissionResponse
+	for _, s := range submissions {
+		stud, _, _, _, _, _ := r.SearchUserSignUpResponse(s.StudentID)
+
+		if !strings.Contains(strings.ToLower(stud.Username), strings.ToLower(q)) {
+			continue
+		}
+
+		var status constants.StatusSubmissions
+		r.rctx.DB.Where("id = ?", s.StatusSubmissionsID).First(&status)
+
+		resp = append(resp, mapper.MapSubmissionResponse(
+			stud,
+			lect,
+			*a,
+			status.Name,
+			s.SubmittedAt,
+		))
+	}
+
+	return resp, nil
 }

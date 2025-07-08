@@ -2,14 +2,17 @@ package asgn
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
 	"go-coursework/internal/dto/asgn"
+	"go-coursework/internal/helpers"
 	"go-coursework/internal/models"
 	"go-coursework/internal/repositories"
 	pkgerr "go-coursework/pkg/errors"
 	"go-coursework/pkg/jwt"
 	"mime/multipart"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -375,12 +378,12 @@ func (h *AssignmentsHandler) SubmissionGrade(ctx *fiber.Ctx) error {
 
 	var req asgn.SubmissionGradeRequest
 
-	submission, err := getSubmissionClaims(ctx)
+	submission, err := helpers.GetSubmissionClaims(ctx)
 	if err != nil {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingSubmissionID.Message, pkgerr.ErrMissingSubmissionID.Details)
 	}
 
-	lecturer, err := getUserClaims(ctx)
+	lecturer, err := helpers.GetUserClaims(ctx)
 	if err != nil {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingClaims.Message, pkgerr.ErrMissingClaims.Details)
 	}
@@ -413,12 +416,12 @@ func (h *AssignmentsHandler) SubmissionGrade(ctx *fiber.Ctx) error {
 func (h *AssignmentsHandler) UpdateSubmission(ctx *fiber.Ctx) error {
 	const op = "handler.AssignmentsHandler.UpdateSubmission"
 
-	user, err := getUserClaims(ctx)
+	user, err := helpers.GetUserClaims(ctx)
 	if err != nil {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingClaims.Message, pkgerr.ErrMissingClaims.Details)
 	}
 
-	submission, err := getSubmissionClaims(ctx)
+	submission, err := helpers.GetSubmissionClaims(ctx)
 	if err != nil {
 		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingSubmissionID.Message, pkgerr.ErrMissingSubmissionID.Details)
 	}
@@ -441,36 +444,77 @@ func (h *AssignmentsHandler) UpdateSubmission(ctx *fiber.Ctx) error {
 	})
 }
 
-func getUserClaims(ctx *fiber.Ctx) (
-	*jwt.Claims,
-	error,
-) {
-	claims, ok := ctx.Locals("user").(*jwt.Claims)
-	if !ok || claims == nil {
-		return nil, errors.New("missing or invalid user claims")
-	}
+func (h *AssignmentsHandler) SearchSubmissionWS(c *websocket.Conn) {
+	defer c.Close()
 
-	return claims, nil
+	assignment := c.Locals("assignment").(*models.Assignment)
+
+	lecturer := c.Locals("user").(*jwt.Claims)
+
+	for {
+		mt, msg, err := c.ReadMessage()
+		if err != nil || mt == websocket.CloseMessage {
+			break
+		}
+
+		query := strings.TrimSpace(string(msg))
+		if query == "" {
+			continue
+		}
+
+		submissions, err := h.asgnRepo.SearchSubmissionsWS(assignment, query)
+		if err != nil {
+			h.rctx.Logger.LogUserError(lecturer.Email, err, "Error searching submissions")
+			c.WriteJSON(fiber.Map{"error": "Internal server error"})
+			continue
+		}
+
+		h.rctx.Logger.Logger.Infoln(fiber.Map{
+			"submissions": submissions,
+		})
+
+		if err := c.WriteJSON(submissions); err != nil {
+			break
+		}
+	}
 }
 
-func getAssignmentClaims(ctx *fiber.Ctx) (
-	*models.Assignment,
-	error,
-) {
-	assignment, ok := ctx.Locals("assignment").(*models.Assignment)
-	if !ok || assignment == nil {
-		return nil, errors.New("missing or invalid assignment claims")
-	}
-	return assignment, nil
-}
-
-func getSubmissionClaims(ctx *fiber.Ctx) (
-	*models.Submission,
-	error,
-) {
-	sub, ok := ctx.Locals("submission").(*models.Submission)
-	if !ok || sub == nil {
-		return nil, errors.New("missing or invalid submission claims")
-	}
-	return sub, nil
-}
+//func (h *AssignmentsHandler) GetSubmissionByeUsername(ctx *fiber.Ctx) error {
+//	const op = "handler.AssignmentsHandler.GetSubmissionByeUsername"
+//
+//	u := ctx.Params("username", "")
+//	if u == "" {
+//		err := errors.New("username is required in param")
+//		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusBadRequest, op, err, pkgerr.ErrUserNotFound.Message, pkgerr.ErrUserNotFound.Details)
+//	}
+//
+//	user, ok := ctx.Locals("user").(*jwt.Claims)
+//	if !ok || user == nil {
+//		err := errors.New(pkgerr.ErrMissingClaims.Message)
+//		h.rctx.Logger.LogUserError("-", err, pkgerr.ErrMissingClaims.Message)
+//		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrMissingClaims.Message, pkgerr.ErrMissingClaims.Details)
+//	}
+//
+//	assignment, ok := ctx.Locals("assignment").(*models.Assignment)
+//	if !ok || assignment == nil {
+//		err := errors.New(pkgerr.ErrAssignmentNotFound.Message)
+//		h.rctx.Logger.LogUserError(user.Email, err, pkgerr.ErrAssignmentNotFound.Message)
+//		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusNotFound, op, err, pkgerr.ErrAssignmentNotFound.Message, pkgerr.ErrAssignmentNotFound.Details)
+//	}
+//
+//	if user.UserID != assignment.LecturerID {
+//		err := errors.New("The user does not own this assignment")
+//		return h.rctx.Logger.LogRequestError(ctx, fiber.StatusUnauthorized, op, err, pkgerr.ErrUnauthorized.Message, pkgerr.ErrUnauthorized.Details)
+//	}
+//
+//	resp, code, opRepo, err, msg, details := h.asgnRepo.GetSubmission(assignment.ID)
+//	if err != nil {
+//		h.rctx.Logger.LogUserError(user.Email, err, msg)
+//		return h.rctx.Logger.LogRequestError(ctx, code, opRepo, err, msg, details)
+//	}
+//
+//	return ctx.Status(code).JSON(fiber.Map{
+//		"message": msg,
+//		"data":    resp,
+//	})
+//}

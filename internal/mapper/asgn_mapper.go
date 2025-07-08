@@ -11,6 +11,7 @@ func UserAndReqAsgnToAsgnResp(user models.Users, req *asgn.AssignmentRequest, fi
 	return asgn.AssignmentResponse{
 		ID: id,
 		Lecturer: auth.UserSignUpResponse{
+			ID:                user.ID,
 			Username:          user.Username,
 			Email:             user.Email,
 			EmailVerified:     user.ContactVerification.EmailVerified,
@@ -33,6 +34,7 @@ func MapAssignmentToResponse(user *models.Users, assignment *models.Assignment) 
 	return asgn.AssignmentResponse{
 		ID: assignment.ID,
 		Lecturer: auth.UserSignUpResponse{
+			ID:                user.ID,
 			Username:          user.Username,
 			Email:             user.Email,
 			EmailVerified:     user.ContactVerification.EmailVerified,
@@ -54,6 +56,7 @@ func MapAssignmentToResponse(user *models.Users, assignment *models.Assignment) 
 func MapCommentToResponse(comment *models.AssignmentComment, user *models.Users) asgn.CommentResponse {
 	return asgn.CommentResponse{
 		User: auth.UserSignUpResponse{
+			ID:                user.ID,
 			Username:          user.Username,
 			Email:             user.Email,
 			EmailVerified:     user.ContactVerification.EmailVerified,
@@ -72,6 +75,7 @@ func MapCommentToResponse(comment *models.AssignmentComment, user *models.Users)
 func MapSubmissionResponse(user models.Users, lecturer models.Users, assignment models.Assignment, status string, submitted time.Time) asgn.SubmissionResponse {
 	return asgn.SubmissionResponse{
 		User: auth.UserSignUpResponse{
+			ID:                user.ID,
 			Username:          user.Username,
 			Email:             user.Email,
 			EmailVerified:     user.ContactVerification.EmailVerified,
@@ -86,6 +90,7 @@ func MapSubmissionResponse(user models.Users, lecturer models.Users, assignment 
 		Assignment: asgn.AssignmentResponse{
 			ID: assignment.ID,
 			Lecturer: auth.UserSignUpResponse{
+				ID:                lecturer.ID,
 				Username:          lecturer.Username,
 				Email:             lecturer.Email,
 				EmailVerified:     lecturer.ContactVerification.EmailVerified,
@@ -110,6 +115,7 @@ func MapSubmissionResponse(user models.Users, lecturer models.Users, assignment 
 
 func MapUserToUserSignUpResponse(user models.Users) *auth.UserSignUpResponse {
 	return &auth.UserSignUpResponse{
+		ID:                user.ID,
 		Username:          user.Username,
 		Email:             user.Email,
 		EmailVerified:     user.ContactVerification.EmailVerified,

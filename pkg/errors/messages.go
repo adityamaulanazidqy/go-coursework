@@ -219,4 +219,23 @@ var (
 			"Contact support if you believe this is an internal configuration error.",
 		},
 	}
+
+	ErrSendOTPWa = ErrorMessage{
+		Message: "Failed to send OTP",
+		Details: []string{
+			"Could not send OTP to your WhatsApp number.",
+			"Please ensure your WhatsApp is active and connected to the internet.",
+			"If the problem persists, please try again in a few minutes or contact support.",
+		},
+	}
+
+	ErrVerificationOTPWa = ErrorMessage{
+		Message: "OTP verification failed",
+		Details: []string{
+			"The OTP you entered is incorrect or has expired.",
+			"Please ensure you've entered the correct OTP received via WhatsApp.",
+			"If you did not receive an OTP, please request a new one.",
+			"For further assistance, please contact support.",
+		},
+	}
 )
